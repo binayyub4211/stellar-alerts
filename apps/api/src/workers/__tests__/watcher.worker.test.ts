@@ -14,18 +14,22 @@ vi.mock('../../lib/prisma', () => ({
   },
 }));
 
-vi.mock('../../lib/stellar', () => ({
-  stellar: {
-    server: {},
-    getRecentPayments: vi.fn(),
-    getPaymentsSince: vi.fn(),
-    getLatestPagingToken: vi.fn(),
-  },
-  decodeHorizonAsset: vi.fn().mockImplementation((record: any) => ({
-    assetCode: record?.asset_type === 'native' ? 'XLM' : record?.asset_code || 'XLM',
-    assetIssuer: record?.asset_issuer || null,
-  })),
-}));
+vi.mock('../../lib/stellar', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/stellar')>();
+  return {
+    ...actual,
+    stellar: {
+      server: {},
+      getRecentPayments: vi.fn(),
+      getPaymentsSince: vi.fn(),
+      getLatestPagingToken: vi.fn(),
+    },
+    decodeHorizonAsset: vi.fn().mockImplementation((record: any) => ({
+      assetCode: record?.asset_type === 'native' ? 'XLM' : record?.asset_code || 'XLM',
+      assetIssuer: record?.asset_issuer || null,
+    })),
+  };
+});
 
 vi.mock('../../lib/queue', () => ({
   enqueuePaymentAlert: vi.fn(),
@@ -142,4 +146,54 @@ describe('Watcher ingestion cursor', () => {
       expect(stellar.getPaymentsSince).not.toHaveBeenCalled();
     });
   });
+
+  describe('processPaymentRecord with SAC transfer', () => {
+    it('processes SAC transfer event with dynamic decimal formatting', async () => {
+      const { processPaymentRecord } = await import('../watcher.worker');
+      const { enqueuePaymentAlert } = await import('../../lib/queue');
+      const sorobanLib = await import('../../lib/soroban');
+
+      vi.spyOn(sorobanLib, 'getSacMetadata').mockResolvedValue({
+        contractId: 'CA3D525ZJGCS2JA7SXG5E5Z265WJCCAKTHR5EEXY355E55E55E55E55E',
+        name: 'USD Coin',
+        symbol: 'USDC',
+        decimals: 6,
+      });
+
+      const sacRecord = {
+        type: 'contract_event',
+        contractId: 'CA3D525ZJGCS2JA7SXG5E5Z265WJCCAKTHR5EEXY355E55E55E55E55E',
+        transaction_hash: 'tx-sac-123',
+        created_at: '2026-08-24T12:00:00Z',
+        topic: ['transfer', 'GBRPYHIL2CI3FNQ4BXLFMNDLFPPPU2HY4ZDM4T6VKFZ4MVEXDHJA5W5T', wallet.publicKey],
+        value: {
+          amount: '25000000', // 25 USDC with 6 decimals
+        },
+      };
+
+      await processPaymentRecord(wallet, sacRecord);
+
+      expect(prisma.payment.create).toHaveBeenCalledWith({
+        data: {
+          walletId: wallet.id,
+          txHash: 'tx-sac-123',
+          fromAddress: 'GBRPYHIL2CI3FNQ4BXLFMNDLFPPPU2HY4ZDM4T6VKFZ4MVEXDHJA5W5T',
+          amount: 25,
+          asset: 'USDC',
+          assetIssuer: null,
+          receivedAt: new Date('2026-08-24T12:00:00Z'),
+        },
+      });
+
+      expect(enqueuePaymentAlert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          txHash: 'tx-sac-123',
+          amount: '25',
+          asset: 'USDC',
+          fromAddress: 'GBRPYHIL2CI3FNQ4BXLFMNDLFPPPU2HY4ZDM4T6VKFZ4MVEXDHJA5W5T',
+        })
+      );
+    });
+  });
 });
+
