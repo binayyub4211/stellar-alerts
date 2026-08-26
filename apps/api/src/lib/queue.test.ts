@@ -24,6 +24,22 @@ vi.mock('bullmq', () => {
   };
 });
 
+vi.mock('./prisma', () => {
+  return {
+    prisma: {
+      wallet: {
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
+    },
+  };
+});
+
+vi.mock('../utils/discord', () => {
+  return {
+    dispatchDiscordAlert: vi.fn().mockResolvedValue(true),
+  };
+});
+
 vi.mock('resend', () => {
   return {
     Resend: vi.fn().mockImplementation(() => {

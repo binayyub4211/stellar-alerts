@@ -1,5 +1,9 @@
 import { Queue, QueueEvents, Job, Worker } from 'bullmq';
 import { Resend } from 'resend';
+import { prisma } from './prisma';
+import { dispatchDiscordAlert } from '../utils/discord';
+
+const DISCORD_WEBHOOK_HOST = 'discord.com/api/webhooks';
 
 export interface AlertJobData {
   paymentId: string;
@@ -68,6 +72,9 @@ try {
     }
     
     console.log(`[Worker] Sent email receipt for ${data.paymentId}`);
+
+    await dispatchDiscordAlerts(data);
+
     return resendData;
   }, { connection });
 
@@ -89,6 +96,28 @@ try {
   console.log(`[Queue] 📡 BullMQ payment-alerts queue initialized (${redisHost}:${redisPort})`);
 } catch (err: any) {
   console.warn(`[Queue] Could not initialize BullMQ queue: ${err.message}`);
+}
+
+async function dispatchDiscordAlerts(data: AlertJobData) {
+  try {
+    const wallet = await prisma.wallet.findUnique({
+      where: { id: data.walletId },
+      include: { user: { include: { webhooks: true } } },
+    });
+
+    const discordWebhooks = (wallet?.user.webhooks || []).filter(
+      (webhook) => webhook.isActive && webhook.url.includes(DISCORD_WEBHOOK_HOST)
+    );
+
+    for (const webhook of discordWebhooks) {
+      const delivered = await dispatchDiscordAlert(webhook.url, data);
+      if (delivered) {
+        console.log(`[Worker] Sent Discord embed for ${data.paymentId} to webhook ${webhook.id}`);
+      }
+    }
+  } catch (err: any) {
+    console.warn(`[Worker] Failed to dispatch Discord alerts for ${data.paymentId}: ${err.message}`);
+  }
 }
 
 export async function enqueuePaymentAlert(data: AlertJobData) {
