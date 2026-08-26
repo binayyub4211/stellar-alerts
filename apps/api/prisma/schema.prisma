@@ -62,6 +62,7 @@ model NotificationPreference {
   emailEnabled    Boolean @default(true)
   whatsappNumber  String?
   whatsappEnabled Boolean @default(false)
+  language        String  @default("EN")
 }
 
 model Webhook {
