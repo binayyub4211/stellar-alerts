@@ -56,7 +56,38 @@ export const ModelName = {
   IngestionCursor: 'IngestionCursor',
   Payment: 'Payment',
   NotificationPreference: 'NotificationPreference',
-  Webhook: 'Webhook'
+  DeliveryLog: 'DeliveryLog',
+  PaymentChecksum: 'PaymentChecksum',
+  DailyChecksumRoot: 'DailyChecksumRoot',
+  AlertRule: 'AlertRule',
+  AlertRuleDispatchLog: 'AlertRuleDispatchLog',
+  TelegramSyncCode: 'TelegramSyncCode',
+  WhatsAppDeliveryLog: 'WhatsAppDeliveryLog',
+  Webhook: 'Webhook',
+  WebhookLog: 'WebhookLog',
+  WebhookCircuitBreaker: 'WebhookCircuitBreaker',
+  SorobanEventSnapshot: 'SorobanEventSnapshot',
+  SorobanStateAudit: 'SorobanStateAudit',
+  SorobanContractSubscription: 'SorobanContractSubscription',
+  SacTokenMintBurnEvent: 'SacTokenMintBurnEvent',
+  SacTokenSupply: 'SacTokenSupply',
+  MultisigTreasury: 'MultisigTreasury',
+  MultisigSignerWatcher: 'MultisigSignerWatcher',
+  PendingMultisigTransaction: 'PendingMultisigTransaction',
+  AnchorTransactionWatch: 'AnchorTransactionWatch',
+  DexSwapWatch: 'DexSwapWatch',
+  SorobanTopicIndex: 'SorobanTopicIndex',
+  SorobanTopicIndexCursor: 'SorobanTopicIndexCursor',
+  DexSwapEvent: 'DexSwapEvent',
+  SecurityAuditLog: 'SecurityAuditLog',
+  NotificationDelivery: 'NotificationDelivery',
+  NotificationDeliveryAttempt: 'NotificationDeliveryAttempt',
+  DeadLetter: 'DeadLetter',
+  WebhookSandboxReplay: 'WebhookSandboxReplay',
+  DeadLetterAudit: 'DeadLetterAudit',
+  MfaRecoveryCode: 'MfaRecoveryCode',
+  RefreshSession: 'RefreshSession',
+  RefreshTokenHistory: 'RefreshTokenHistory'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -78,6 +109,8 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
+  mfaSecret: 'mfaSecret',
+  mfaEnabled: 'mfaEnabled',
   createdAt: 'createdAt'
 } as const
 
@@ -100,7 +133,13 @@ export const IngestionCursorScalarFieldEnum = {
   walletId: 'walletId',
   pagingToken: 'pagingToken',
   lastSyncedAt: 'lastSyncedAt',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  status: 'status',
+  consecutiveFailures: 'consecutiveFailures',
+  lastError: 'lastError',
+  lastSuccessAt: 'lastSuccessAt',
+  gapDetectedAt: 'gapDetectedAt',
+  lastGapLedgerDelta: 'lastGapLedgerDelta'
 } as const
 
 export type IngestionCursorScalarFieldEnum = (typeof IngestionCursorScalarFieldEnum)[keyof typeof IngestionCursorScalarFieldEnum]
@@ -129,22 +168,490 @@ export const NotificationPreferenceScalarFieldEnum = {
   telegramEnabled: 'telegramEnabled',
   emailEnabled: 'emailEnabled',
   whatsappNumber: 'whatsappNumber',
-  whatsappEnabled: 'whatsappEnabled'
+  whatsappEnabled: 'whatsappEnabled',
+  discordWebhookUrl: 'discordWebhookUrl',
+  discordEnabled: 'discordEnabled',
+  slackWebhookUrl: 'slackWebhookUrl',
+  slackEnabled: 'slackEnabled',
+  pushChannelAddress: 'pushChannelAddress',
+  pushEnabled: 'pushEnabled',
+  receiptPreference: 'receiptPreference',
+  assetFilters: 'assetFilters',
+  minAmount: 'minAmount',
+  enabledChannels: 'enabledChannels',
+  language: 'language',
+  filterRules: 'filterRules'
 } as const
 
 export type NotificationPreferenceScalarFieldEnum = (typeof NotificationPreferenceScalarFieldEnum)[keyof typeof NotificationPreferenceScalarFieldEnum]
+
+
+export const DeliveryLogScalarFieldEnum = {
+  id: 'id',
+  paymentId: 'paymentId',
+  channel: 'channel',
+  status: 'status',
+  error: 'error',
+  attempt: 'attempt',
+  createdAt: 'createdAt'
+} as const
+
+export type DeliveryLogScalarFieldEnum = (typeof DeliveryLogScalarFieldEnum)[keyof typeof DeliveryLogScalarFieldEnum]
+
+
+export const PaymentChecksumScalarFieldEnum = {
+  id: 'id',
+  paymentId: 'paymentId',
+  sequence: 'sequence',
+  payloadHash: 'payloadHash',
+  previousHash: 'previousHash',
+  chainHash: 'chainHash',
+  createdAt: 'createdAt'
+} as const
+
+export type PaymentChecksumScalarFieldEnum = (typeof PaymentChecksumScalarFieldEnum)[keyof typeof PaymentChecksumScalarFieldEnum]
+
+
+export const DailyChecksumRootScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  merkleRoot: 'merkleRoot',
+  leafCount: 'leafCount',
+  computedAt: 'computedAt'
+} as const
+
+export type DailyChecksumRootScalarFieldEnum = (typeof DailyChecksumRootScalarFieldEnum)[keyof typeof DailyChecksumRootScalarFieldEnum]
+
+
+export const AlertRuleScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  walletId: 'walletId',
+  name: 'name',
+  assets: 'assets',
+  minAmount: 'minAmount',
+  maxAmount: 'maxAmount',
+  memo: 'memo',
+  channels: 'channels',
+  conditions: 'conditions',
+  version: 'version',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AlertRuleScalarFieldEnum = (typeof AlertRuleScalarFieldEnum)[keyof typeof AlertRuleScalarFieldEnum]
+
+
+export const AlertRuleDispatchLogScalarFieldEnum = {
+  id: 'id',
+  paymentId: 'paymentId',
+  matchedRuleIds: 'matchedRuleIds',
+  createdAt: 'createdAt'
+} as const
+
+export type AlertRuleDispatchLogScalarFieldEnum = (typeof AlertRuleDispatchLogScalarFieldEnum)[keyof typeof AlertRuleDispatchLogScalarFieldEnum]
+
+
+export const TelegramSyncCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  walletAddress: 'walletAddress',
+  code: 'code',
+  chatId: 'chatId',
+  isUsed: 'isUsed',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  confirmedAt: 'confirmedAt'
+} as const
+
+export type TelegramSyncCodeScalarFieldEnum = (typeof TelegramSyncCodeScalarFieldEnum)[keyof typeof TelegramSyncCodeScalarFieldEnum]
+
+
+export const WhatsAppDeliveryLogScalarFieldEnum = {
+  id: 'id',
+  paymentId: 'paymentId',
+  toNumber: 'toNumber',
+  success: 'success',
+  messageSid: 'messageSid',
+  status: 'status',
+  error: 'error',
+  attempts: 'attempts',
+  sentAt: 'sentAt'
+} as const
+
+export type WhatsAppDeliveryLogScalarFieldEnum = (typeof WhatsAppDeliveryLogScalarFieldEnum)[keyof typeof WhatsAppDeliveryLogScalarFieldEnum]
 
 
 export const WebhookScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   url: 'url',
-  secret: 'secret',
+  secretCiphertext: 'secretCiphertext',
+  secretIv: 'secretIv',
+  secretAuthTag: 'secretAuthTag',
+  keyVersion: 'keyVersion',
+  payloadTemplate: 'payloadTemplate',
   isActive: 'isActive',
   createdAt: 'createdAt'
 } as const
 
 export type WebhookScalarFieldEnum = (typeof WebhookScalarFieldEnum)[keyof typeof WebhookScalarFieldEnum]
+
+
+export const WebhookLogScalarFieldEnum = {
+  id: 'id',
+  webhookId: 'webhookId',
+  statusCode: 'statusCode',
+  responseBody: 'responseBody',
+  error: 'error',
+  sentAt: 'sentAt',
+  createdAt: 'createdAt'
+} as const
+
+export type WebhookLogScalarFieldEnum = (typeof WebhookLogScalarFieldEnum)[keyof typeof WebhookLogScalarFieldEnum]
+
+
+export const WebhookCircuitBreakerScalarFieldEnum = {
+  id: 'id',
+  webhookId: 'webhookId',
+  state: 'state',
+  failureCount: 'failureCount',
+  lastFailureAt: 'lastFailureAt',
+  openedAt: 'openedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WebhookCircuitBreakerScalarFieldEnum = (typeof WebhookCircuitBreakerScalarFieldEnum)[keyof typeof WebhookCircuitBreakerScalarFieldEnum]
+
+
+export const SorobanEventSnapshotScalarFieldEnum = {
+  id: 'id',
+  contractId: 'contractId',
+  from: 'from',
+  to: 'to',
+  amount: 'amount',
+  ledgerSeq: 'ledgerSeq',
+  eventType: 'eventType',
+  txHash: 'txHash',
+  paid: 'paid',
+  createdAt: 'createdAt'
+} as const
+
+export type SorobanEventSnapshotScalarFieldEnum = (typeof SorobanEventSnapshotScalarFieldEnum)[keyof typeof SorobanEventSnapshotScalarFieldEnum]
+
+
+export const SorobanStateAuditScalarFieldEnum = {
+  id: 'id',
+  contractId: 'contractId',
+  ledgerKey: 'ledgerKey',
+  ledgerSeq: 'ledgerSeq',
+  snapshot: 'snapshot',
+  patch: 'patch',
+  previousLedger: 'previousLedger',
+  createdAt: 'createdAt'
+} as const
+
+export type SorobanStateAuditScalarFieldEnum = (typeof SorobanStateAuditScalarFieldEnum)[keyof typeof SorobanStateAuditScalarFieldEnum]
+
+
+export const SorobanContractSubscriptionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  contractId: 'contractId',
+  topic: 'topic',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SorobanContractSubscriptionScalarFieldEnum = (typeof SorobanContractSubscriptionScalarFieldEnum)[keyof typeof SorobanContractSubscriptionScalarFieldEnum]
+
+
+export const SacTokenMintBurnEventScalarFieldEnum = {
+  id: 'id',
+  contractId: 'contractId',
+  eventType: 'eventType',
+  amount: 'amount',
+  from: 'from',
+  to: 'to',
+  ledgerSeq: 'ledgerSeq',
+  txHash: 'txHash',
+  createdAt: 'createdAt'
+} as const
+
+export type SacTokenMintBurnEventScalarFieldEnum = (typeof SacTokenMintBurnEventScalarFieldEnum)[keyof typeof SacTokenMintBurnEventScalarFieldEnum]
+
+
+export const SacTokenSupplyScalarFieldEnum = {
+  contractId: 'contractId',
+  circulatingSupply: 'circulatingSupply',
+  totalMinted: 'totalMinted',
+  totalBurned: 'totalBurned',
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SacTokenSupplyScalarFieldEnum = (typeof SacTokenSupplyScalarFieldEnum)[keyof typeof SacTokenSupplyScalarFieldEnum]
+
+
+export const MultisigTreasuryScalarFieldEnum = {
+  id: 'id',
+  publicKey: 'publicKey',
+  label: 'label',
+  thresholdLevel: 'thresholdLevel',
+  createdAt: 'createdAt'
+} as const
+
+export type MultisigTreasuryScalarFieldEnum = (typeof MultisigTreasuryScalarFieldEnum)[keyof typeof MultisigTreasuryScalarFieldEnum]
+
+
+export const MultisigSignerWatcherScalarFieldEnum = {
+  id: 'id',
+  treasuryId: 'treasuryId',
+  userId: 'userId',
+  signerPublicKey: 'signerPublicKey',
+  createdAt: 'createdAt'
+} as const
+
+export type MultisigSignerWatcherScalarFieldEnum = (typeof MultisigSignerWatcherScalarFieldEnum)[keyof typeof MultisigSignerWatcherScalarFieldEnum]
+
+
+export const PendingMultisigTransactionScalarFieldEnum = {
+  id: 'id',
+  treasuryId: 'treasuryId',
+  innerTxHash: 'innerTxHash',
+  envelopeXdr: 'envelopeXdr',
+  requiredThreshold: 'requiredThreshold',
+  collectedWeight: 'collectedWeight',
+  signedByJson: 'signedByJson',
+  notifiedJson: 'notifiedJson',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PendingMultisigTransactionScalarFieldEnum = (typeof PendingMultisigTransactionScalarFieldEnum)[keyof typeof PendingMultisigTransactionScalarFieldEnum]
+
+
+export const AnchorTransactionWatchScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  anchorEndpoint: 'anchorEndpoint',
+  anchorTxId: 'anchorTxId',
+  protocol: 'protocol',
+  lastKnownStatus: 'lastKnownStatus',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AnchorTransactionWatchScalarFieldEnum = (typeof AnchorTransactionWatchScalarFieldEnum)[keyof typeof AnchorTransactionWatchScalarFieldEnum]
+
+
+export const DexSwapWatchScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  poolContractId: 'poolContractId',
+  minAmountThreshold: 'minAmountThreshold',
+  minSlippagePercent: 'minSlippagePercent',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DexSwapWatchScalarFieldEnum = (typeof DexSwapWatchScalarFieldEnum)[keyof typeof DexSwapWatchScalarFieldEnum]
+
+
+export const SorobanTopicIndexScalarFieldEnum = {
+  id: 'id',
+  contractId: 'contractId',
+  ledgerSeq: 'ledgerSeq',
+  txHash: 'txHash',
+  topicXdrJson: 'topicXdrJson',
+  topics: 'topics',
+  topicSymbols: 'topicSymbols',
+  topicSymbol: 'topicSymbol',
+  topicsHash: 'topicsHash',
+  createdAt: 'createdAt'
+} as const
+
+export type SorobanTopicIndexScalarFieldEnum = (typeof SorobanTopicIndexScalarFieldEnum)[keyof typeof SorobanTopicIndexScalarFieldEnum]
+
+
+export const SorobanTopicIndexCursorScalarFieldEnum = {
+  id: 'id',
+  contractId: 'contractId',
+  ledgerSeq: 'ledgerSeq',
+  updatedAt: 'updatedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type SorobanTopicIndexCursorScalarFieldEnum = (typeof SorobanTopicIndexCursorScalarFieldEnum)[keyof typeof SorobanTopicIndexCursorScalarFieldEnum]
+
+
+export const DexSwapEventScalarFieldEnum = {
+  id: 'id',
+  poolContractId: 'poolContractId',
+  ledgerSeq: 'ledgerSeq',
+  txHash: 'txHash',
+  tokenInAddress: 'tokenInAddress',
+  tokenOutAddress: 'tokenOutAddress',
+  amountIn: 'amountIn',
+  amountOut: 'amountOut',
+  priceImpactPct: 'priceImpactPct',
+  createdAt: 'createdAt'
+} as const
+
+export type DexSwapEventScalarFieldEnum = (typeof DexSwapEventScalarFieldEnum)[keyof typeof DexSwapEventScalarFieldEnum]
+
+
+export const SecurityAuditLogScalarFieldEnum = {
+  id: 'id',
+  eventType: 'eventType',
+  txHash: 'txHash',
+  topic: 'topic',
+  sequence: 'sequence',
+  contractId: 'contractId',
+  details: 'details',
+  severity: 'severity',
+  createdAt: 'createdAt'
+} as const
+
+export type SecurityAuditLogScalarFieldEnum = (typeof SecurityAuditLogScalarFieldEnum)[keyof typeof SecurityAuditLogScalarFieldEnum]
+
+
+export const NotificationDeliveryScalarFieldEnum = {
+  id: 'id',
+  deliveryKey: 'deliveryKey',
+  paymentId: 'paymentId',
+  channel: 'channel',
+  destination: 'destination',
+  userId: 'userId',
+  status: 'status',
+  currentAttempt: 'currentAttempt',
+  maxAttempts: 'maxAttempts',
+  lastError: 'lastError',
+  deliveredAt: 'deliveredAt',
+  terminalAt: 'terminalAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NotificationDeliveryScalarFieldEnum = (typeof NotificationDeliveryScalarFieldEnum)[keyof typeof NotificationDeliveryScalarFieldEnum]
+
+
+export const NotificationDeliveryAttemptScalarFieldEnum = {
+  id: 'id',
+  deliveryKey: 'deliveryKey',
+  deliveryId: 'deliveryId',
+  paymentId: 'paymentId',
+  channel: 'channel',
+  destination: 'destination',
+  providerRequestId: 'providerRequestId',
+  status: 'status',
+  attempt: 'attempt',
+  error: 'error',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NotificationDeliveryAttemptScalarFieldEnum = (typeof NotificationDeliveryAttemptScalarFieldEnum)[keyof typeof NotificationDeliveryAttemptScalarFieldEnum]
+
+
+export const DeadLetterScalarFieldEnum = {
+  id: 'id',
+  deliveryKey: 'deliveryKey',
+  paymentId: 'paymentId',
+  userId: 'userId',
+  channel: 'channel',
+  destination: 'destination',
+  payload: 'payload',
+  error: 'error',
+  status: 'status',
+  retryCount: 'retryCount',
+  failedAt: 'failedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type DeadLetterScalarFieldEnum = (typeof DeadLetterScalarFieldEnum)[keyof typeof DeadLetterScalarFieldEnum]
+
+
+export const WebhookSandboxReplayScalarFieldEnum = {
+  id: 'id',
+  deadLetterId: 'deadLetterId',
+  userId: 'userId',
+  replayType: 'replayType',
+  requestEnvelope: 'requestEnvelope',
+  requestHeaders: 'requestHeaders',
+  requestBody: 'requestBody',
+  responseStatus: 'responseStatus',
+  responseHeaders: 'responseHeaders',
+  responseBody: 'responseBody',
+  responseDelayMs: 'responseDelayMs',
+  durationMs: 'durationMs',
+  status: 'status',
+  error: 'error',
+  createdAt: 'createdAt'
+} as const
+
+export type WebhookSandboxReplayScalarFieldEnum = (typeof WebhookSandboxReplayScalarFieldEnum)[keyof typeof WebhookSandboxReplayScalarFieldEnum]
+
+
+export const DeadLetterAuditScalarFieldEnum = {
+  id: 'id',
+  deadLetterId: 'deadLetterId',
+  actorUserId: 'actorUserId',
+  action: 'action',
+  note: 'note',
+  createdAt: 'createdAt'
+} as const
+
+export type DeadLetterAuditScalarFieldEnum = (typeof DeadLetterAuditScalarFieldEnum)[keyof typeof DeadLetterAuditScalarFieldEnum]
+
+
+export const MfaRecoveryCodeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  codeHash: 'codeHash',
+  used: 'used',
+  usedAt: 'usedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type MfaRecoveryCodeScalarFieldEnum = (typeof MfaRecoveryCodeScalarFieldEnum)[keyof typeof MfaRecoveryCodeScalarFieldEnum]
+
+
+export const RefreshSessionScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  userId: 'userId',
+  currentJti: 'currentJti',
+  rotationCounter: 'rotationCounter',
+  isRevoked: 'isRevoked',
+  revocationReason: 'revocationReason',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RefreshSessionScalarFieldEnum = (typeof RefreshSessionScalarFieldEnum)[keyof typeof RefreshSessionScalarFieldEnum]
+
+
+export const RefreshTokenHistoryScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  jti: 'jti',
+  userId: 'userId',
+  rotationCounter: 'rotationCounter',
+  isConsumed: 'isConsumed',
+  consumedAt: 'consumedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RefreshTokenHistoryScalarFieldEnum = (typeof RefreshTokenHistoryScalarFieldEnum)[keyof typeof RefreshTokenHistoryScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -153,6 +660,21 @@ export const SortOrder = {
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {
@@ -169,4 +691,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

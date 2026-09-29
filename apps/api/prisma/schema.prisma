@@ -8,12 +8,26 @@ datasource db {
 }
 
 model User {
-  id          String                   @id @default(cuid())
+  id           String                  @id @default(cuid())
   email       String                   @unique
+  mfaSecret   String?                  // TOTP secret for MFA
+  mfaEnabled  Boolean                  @default(false)
   createdAt   DateTime                 @default(now())
   wallets     Wallet[]
   webhooks    Webhook[]
   notifyPrefs NotificationPreference?
+  sorobanSubscriptions SorobanContractSubscription[]
+  multisigSignerWatches MultisigSignerWatcher[]
+  anchorWatches         AnchorTransactionWatch[]
+  dexSwapWatches        DexSwapWatch[]
+  alertRules            AlertRule[]
+  deliveryAttempts       NotificationDeliveryAttempt[]
+  deadLetters            DeadLetter[]
+  webhookSandboxReplays  WebhookSandboxReplay[]
+  mfaRecoveryCodes   MfaRecoveryCode[]
+  notificationDeliveries NotificationDelivery[]
+  refreshSessions        RefreshSession[]
+  telegramSyncCodes      TelegramSyncCode[]
 }
 
 model Wallet {
@@ -22,9 +36,10 @@ model Wallet {
   user       User             @relation(fields: [userId], references: [id])
   publicKey  String           @unique
   label      String?
-  createdAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
   payments   Payment[]
   cursor     IngestionCursor?
+  alertRules AlertRule[]
 }
 
 model IngestionCursor {
@@ -34,6 +49,14 @@ model IngestionCursor {
   pagingToken  String
   lastSyncedAt DateTime @default(now()) @updatedAt
   createdAt    DateTime @default(now())
+
+  // Operator-visible ingestion health (see lib/cursor-recovery.ts).
+  status               String    @default("active") // 'active' | 'gap_detected'
+  consecutiveFailures  Int       @default(0)
+  lastError            String?
+  lastSuccessAt        DateTime?
+  gapDetectedAt        DateTime?
+  lastGapLedgerDelta    Int?
 }
 
 model Payment {
@@ -48,29 +71,672 @@ model Payment {
   memo        String?
   receivedAt  DateTime
   createdAt   DateTime @default(now())
+  deliveryAttempts NotificationDeliveryAttempt[]
+  deadLetters       DeadLetter[]
+  deliveries        NotificationDelivery[]
+  checksum          PaymentChecksum?
 
   @@index([txHash])
   @@index([receivedAt])
+  @@index([walletId])
+  @@index([asset])
+  @@index([walletId, receivedAt])
 }
 
 model NotificationPreference {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  user            User    @relation(fields: [userId], references: [id])
-  telegramChatId  String?
-  telegramEnabled Boolean @default(false)
-  emailEnabled    Boolean @default(true)
-  whatsappNumber  String?
-  whatsappEnabled Boolean @default(false)
-  language        String  @default("EN")
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id])
+  telegramChatId    String?
+  telegramEnabled   Boolean @default(false)
+  emailEnabled      Boolean @default(true)
+  whatsappNumber    String?
+  whatsappEnabled   Boolean @default(false)
+  discordWebhookUrl String?
+  discordEnabled    Boolean @default(false)
+  slackWebhookUrl   String?
+  slackEnabled      Boolean @default(false)
+  pushChannelAddress String?
+  pushEnabled       Boolean @default(false)
+  receiptPreference String  @default("instant")
+  assetFilters      String[] @default([])
+  minAmount         Decimal?
+  enabledChannels   String[] @default([])
+  language          String  @default("EN")
+  filterRules       Json?   // Stores filter rule group as JSON
+}
+
+model DeliveryLog {
+  id        String   @id @default(cuid())
+  paymentId String
+  channel   String
+  status    String
+  error     String?
+  attempt   Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([paymentId, channel])
+  @@index([paymentId])
+}
+
+// Append-only hash-pointer audit chain over ingested Payment rows (see
+// docs/payment-checksum-chain.md and services/checksumChain.service.ts).
+// Each row's chainHash commits to the previous row's chainHash plus this
+// row's own payloadHash, so altering or deleting any historical Payment or
+// PaymentChecksum row breaks every chainHash computed after it — detectable
+// by walking the chain and recomputing (verifyChain()). Rows are never
+// updated or deleted after insert, only appended.
+model PaymentChecksum {
+  id           String   @id @default(cuid())
+  paymentId    String   @unique
+  payment      Payment  @relation(fields: [paymentId], references: [id])
+  // Append order (NOT Payment.receivedAt, which is on-chain time set by the
+  // Stellar network and can arrive out of order relative to when we
+  // ingested it). The chain follows ingestion order, since that's the only
+  // order this service can itself guarantee monotonicity for.
+  sequence     Int      @default(autoincrement())
+  payloadHash  String
+  previousHash String
+  chainHash    String
+  createdAt    DateTime @default(now())
+
+  @@index([sequence])
+  @@index([createdAt])
+}
+
+// One row per UTC calendar day, committing to every PaymentChecksum
+// appended that day via a Merkle tree over their payloadHashes (see
+// services/checksumChain.service.ts computeDailyMerkleRoot()).
+model DailyChecksumRoot {
+  id         String   @id @default(cuid())
+  date       String   @unique // UTC day, "YYYY-MM-DD"
+  merkleRoot String
+  leafCount  Int
+  computedAt DateTime @default(now())
+}
+
+// A persisted, user-authored rule that gates payment alert dispatch. Distinct
+// from NotificationPreference.filterRules (a single legacy filter blob):
+// a user can have many named AlertRules, each optionally scoped to one
+// wallet, with an asset allow-list, a minimum amount threshold, and an
+// arbitrary FilterRuleGroup for advanced grouping (see lib/rules-engine.ts).
+model AlertRule {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Scopes the rule to one wallet; null applies it across all of the user's wallets.
+  walletId   String?
+  wallet     Wallet?   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  name       String?
+  // Asset codes this rule matches; empty array means "any asset".
+  assets     String[]  @default([])
+  minAmount  Decimal?
+  maxAmount  Decimal?
+  memo       String?
+  channels   String[]  @default([])
+  // Optional FilterRuleGroup JSON for AND/OR-grouped conditions beyond asset/minAmount.
+  conditions Json?
+  version    Int       @default(1)
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([userId, isActive])
+  @@index([walletId, isActive])
+}
+
+// Idempotency record: one row per payment that matched at least one active
+// AlertRule, so re-evaluating the same payment event (duplicate delivery,
+// retried job) never enqueues a second notification job.
+model AlertRuleDispatchLog {
+  id             String   @id @default(cuid())
+  paymentId      String   @unique
+  matchedRuleIds Json
+  createdAt      DateTime @default(now())
+}
+
+// One-time expiring sync codes for Telegram account linking (#260).
+// Provides replay protection and confirmation tracking without exposing bot tokens.
+model TelegramSyncCode {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletAddress String?
+  code          String    @unique
+  chatId        String?
+  isUsed        Boolean   @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+
+  @@index([userId])
+  @@index([code])
+  @@index([expiresAt])
+}
+
+model WhatsAppDeliveryLog {
+  id         String   @id @default(cuid())
+  paymentId  String
+  toNumber   String
+  success    Boolean
+  messageSid String?
+  status     String?
+  error      String?
+  attempts   Int      @default(1)
+  sentAt     DateTime @default(now())
+
+  @@index([paymentId])
 }
 
 model Webhook {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  url       String
-  secret     String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id                String                   @id @default(cuid())
+  userId            String
+  user              User                     @relation(fields: [userId], references: [id])
+  url               String
+  secretCiphertext  String
+  secretIv          String
+  secretAuthTag     String
+  keyVersion        Int                      @default(1)
+  payloadTemplate   String?
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  logs              WebhookLog[]
+  circuitBreaker    WebhookCircuitBreaker?
 }
+
+model WebhookLog {
+  id           String   @id @default(cuid())
+  webhookId    String
+  webhook      Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  statusCode   Int?
+  responseBody String?
+  error        String?
+  sentAt       DateTime @default(now())
+  createdAt    DateTime @default(now())
+}
+
+model WebhookCircuitBreaker {
+  id               String   @id @default(cuid())
+  webhookId        String   @unique
+  webhook          Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  state            String   @default("closed") // closed, open, half-open
+  failureCount     Int      @default(0)
+  lastFailureAt    DateTime?
+  openedAt         DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SorobanEventSnapshot {
+  id           String   @id @default(cuid())
+  contractId   String
+  from         String
+  to           String
+  amount       String
+  ledgerSeq    Int
+  eventType    String   @default("transfer")
+  txHash       String?
+  paid         Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@unique([contractId, ledgerSeq, from, to, amount])
+  @@index([contractId])
+  @@index([ledgerSeq])
+}
+
+model SorobanStateAudit {
+  id             String   @id @default(cuid())
+  contractId     String
+  ledgerKey      String
+  ledgerSeq      Int
+  snapshot       Json
+  patch          Json
+  previousLedger Int?
+  createdAt      DateTime @default(now())
+
+  @@unique([contractId, ledgerKey, ledgerSeq])
+  @@index([contractId, ledgerKey, ledgerSeq])
+  @@index([createdAt])
+}
+
+model SorobanContractSubscription {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contractId     String
+  topic          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, contractId, topic])
+  @@index([contractId])
+  @@index([userId])
+}
+
+model SacTokenMintBurnEvent {
+  id         String   @id @default(cuid())
+  contractId   String
+  supply       SacTokenSupply @relation(fields: [contractId], references: [contractId], onDelete: Cascade)
+  eventType   String   @default("mint")
+  amount       Decimal
+  from         String?
+  to           String?
+  ledgerSeq    Int
+  txHash        String?
+  createdAt     DateTime @default(now())
+
+  @@index([contractId, ledgerSeq])
+  @@index([eventType])
+  @@index([ledgerSeq])
+}
+
+model SacTokenSupply {
+  contractId        String   @id
+  mintBurnEvents    SacTokenMintBurnEvent[]
+  circulatingSupply Decimal  @default("0")
+  totalMinted       Decimal  @default("0")
+  totalBurned        Decimal  @default("0")
+  updatedAt          DateTime @updatedAt
+  createdAt           DateTime @default(now())
+}
+
+// A Stellar multisig account (e.g. a DAO treasury) being watched for pending
+// transactions that need more co-signer approvals.
+model MultisigTreasury {
+  id             String   @id @default(cuid())
+  publicKey      String   @unique
+  label          String?
+  // Which of the account's threshold levels (low/med/high) a tracked
+  // transaction must clear. Most treasury payment/transfer operations use
+  // the medium threshold; callers that track ops requiring a different
+  // level (e.g. signer changes, which use high) can override per-treasury.
+  thresholdLevel String   @default("medium")
+  createdAt      DateTime @default(now())
+  signerWatchers MultisigSignerWatcher[]
+  pendingTxs     PendingMultisigTransaction[]
+}
+
+// Maps one of a treasury's on-chain signer keys to the user who should be
+// notified when that signer's approval is still outstanding.
+model MultisigSignerWatcher {
+  id              String   @id @default(cuid())
+  treasuryId      String
+  treasury        MultisigTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  signerPublicKey String
+  createdAt       DateTime @default(now())
+
+  @@unique([treasuryId, signerPublicKey])
+  @@index([treasuryId])
+  @@index([userId])
+}
+
+// A treasury transaction envelope collecting co-signer approvals before it
+// can be submitted on-chain.
+model PendingMultisigTransaction {
+  id                String   @id @default(cuid())
+  treasuryId        String
+  treasury          MultisigTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+  // Hash of the inner transaction (stable across additional signatures being
+  // appended to the same envelope), used to dedupe repeated submissions of
+  // an updated envelope for the same underlying transaction.
+  innerTxHash       String   @unique
+  envelopeXdr       String
+  requiredThreshold Int
+  collectedWeight   Int      @default(0)
+  signedByJson      Json     @default("[]")
+  notifiedJson      Json     @default("[]")
+  status            String   @default("pending") // pending | threshold_met | executed | expired
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([treasuryId])
+  @@index([status])
+}
+
+// A user's subscription to fiat deposit/withdrawal status updates for a
+// specific SEP-24/SEP-31 anchor transaction (identified by the anchor's own
+// transaction id, not a Stellar ledger tx hash — SEP transactions can exist
+// for a while in `incomplete`/`pending_external` before any ledger tx does).
+model AnchorTransactionWatch {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Base URL of the anchor's SEP-24 or SEP-31 transfer server, e.g.
+  // "https://anchor.example.com/sep24".
+  anchorEndpoint    String
+  // The anchor's own transaction id (SEP-24 `id` / SEP-31 `id` field).
+  anchorTxId        String
+  // "sep24" | "sep31"
+  protocol          String
+  lastKnownStatus   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([anchorEndpoint, anchorTxId])
+  @@index([userId])
+  @@index([lastKnownStatus])
+}
+
+// A user's alert threshold on a Soroban DEX (Phoenix / Soroswap style)
+// liquidity pool contract for large swaps / high price-impact trades.
+model DexSwapWatch {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  poolContractId      String
+  // Minimum swap amount (in the pool's output asset, decimal string) that
+  // should trigger an alert. Null means "alert on every swap".
+  minAmountThreshold  String?
+  // Minimum price-impact / slippage percentage (e.g. "2.5" = 2.5%) that
+  // should trigger an alert regardless of amount.
+  minSlippagePercent  String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([userId, poolContractId])
+  @@index([poolContractId])
+}
+
+// ── Soroban Topic Indexer (WASM sub-ledger event filter) ──────────────────
+//
+// High-throughput index of raw Soroban RPC event TOPIC arrays, decoded from
+// their base64 XDR encoding into searchable JSONB columns. The worker
+// (workers/soroban-indexer.worker.ts) sweeps new ledger ranges, decodes the
+// nested ScVal topic array of every contract event, and upserts one row per
+// event here. Dashboard filtering / historical queries run against the two
+// GIN indexes (created over the JSONB `topics` column and the `text[]`
+// `topicSymbols` column with native `CREATE INDEX ... USING gin` in
+// `ensureTopicIndexes`) to stay under the 50ms topic-search SLA.
+model SorobanTopicIndex {
+  id          String   @id @default(cuid())
+  contractId  String
+  ledgerSeq   Int
+  // Transaction hash the event was emitted in (present on RPC getEvents
+  // responses; null for Horizon provideEvents payloads that omit it).
+  txHash      String?
+  // Raw base64 XDR topic array exactly as returned by the RPC/metahorizon
+  // node — preserved verbatim for auditability / re-decode.
+  topicXdrJson Json
+  // Fully decoded, type-tagged topic array, e.g.
+  // [{"type":"symbol","value":"transfer"},{"type":"address","value":"G..."}].
+  // Backed by a GIN jsonb_path_ops index so containment (`@>`) lookups such
+  // as "all events mentioning address X in topic position 1" stay fast.
+  topics      Json
+  // Flat, deduplicated text[] of every symbol found anywhere inside the
+  // topic tree (lead event name first). Backed by a GIN array_ops index for
+  // fast `@>` / `&&` symbol filtering.
+  topicSymbols String[]
+  // Lead symbol of the topic array (conventionally topic[0], the event name)
+  // for cheap btree equality filters that never touch the GIN path.
+  topicSymbol String?
+  // Deterministic sha256 hex of the canonical JSON of `topics` — the dedupe
+  // key so a re-polled ledger range never double-inserts an event (txHash is
+  // not always present on every event source).
+  topicsHash  String
+  createdAt   DateTime @default(now())
+
+  @@unique([contractId, ledgerSeq, topicsHash])
+  @@index([contractId, ledgerSeq])
+  @@index([topicSymbol])
+  @@index([txHash])
+}
+
+// Per-contract sub-ledger checkpoint for the topic indexer.
+model SorobanTopicIndexCursor {
+  id         String   @id @default(cuid())
+  contractId String   @unique
+  ledgerSeq  Int
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+// Dedup / audit record of a detected DEX swap event so a re-polled ledger
+// range doesn't re-alert on the same on-chain swap.
+model DexSwapEvent {
+  id               String   @id @default(cuid())
+  poolContractId   String
+  ledgerSeq        Int
+  txHash           String?
+  tokenInAddress   String
+  tokenOutAddress  String
+  amountIn         String
+  amountOut        String
+  priceImpactPct   String?
+  createdAt        DateTime @default(now())
+
+  @@unique([poolContractId, ledgerSeq, tokenInAddress, tokenOutAddress, amountIn, amountOut])
+  @@index([poolContractId])
+  @@index([ledgerSeq])
+}
+
+// Audit record of security events and contract event replay attempts
+model SecurityAuditLog {
+  id          String   @id @default(cuid())
+  eventType   String   @default("EVENT_REPLAY_ATTEMPT")
+  txHash      String?
+  topic       String?
+  sequence    String?
+  contractId  String?
+  details     Json?
+  severity    String   @default("HIGH")
+  createdAt   DateTime @default(now())
+
+  @@index([eventType])
+  @@index([txHash])
+  @@index([createdAt])
+}
+
+// ── Delivery idempotency (#272) ──────────────────────────────────────────────
+//
+// One row is written for every attempted delivery of a notification to a
+// single channel/destination. The `deliveryKey` is a stable hash of
+// `paymentId:channel:destination`, so the same logical delivery (including a
+// BullMQ retry across worker restarts, or a duplicate enqueued concurrently)
+// always addresses the same key. Status transitions:
+//   pending   → accepted, not yet dispatched to the provider
+//   delivered → provider acknowledged the request
+//   failed    → provider request errored (retryable)
+//   skipped   → suppressed by a concurrent duplicate or an idempotency hit
+//
+// Idempotency rule: a delivery is NEVER dispatched twice while an earlier
+// attempt for the same `deliveryKey` is in `delivered` state.
+model NotificationDelivery {
+  id             String                        @id @default(cuid())
+  deliveryKey    String                        @unique
+  paymentId      String
+  payment        Payment                       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  channel        String
+  destination    String
+  userId         String?
+  user           User?                         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status         String                        @default("pending")
+  currentAttempt Int                           @default(0)
+  maxAttempts    Int                           @default(5)
+  lastError      String?
+  deliveredAt    DateTime?
+  terminalAt     DateTime?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
+  attempts       NotificationDeliveryAttempt[]
+
+  @@unique([paymentId, channel, destination])
+  @@index([status])
+  @@index([channel])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model NotificationDeliveryAttempt {
+  id                String                @id @default(cuid())
+  deliveryKey       String
+  deliveryId        String?
+  delivery          NotificationDelivery? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  paymentId         String?
+  payment           Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  channel           String
+  destination       String?
+  providerRequestId String?
+  status            String                @default("pending") // pending | delivered | failed | skipped | suppressed
+  attempt           Int                   @default(1)
+  error             String?
+  userId            String?
+  user              User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@unique([deliveryKey, attempt])
+  @@index([deliveryKey])
+  @@index([deliveryId])
+  @@index([channel])
+  @@index([status])
+  @@index([paymentId])
+  @@index([createdAt])
+}
+
+// ── Dead-letter inspection & replay (#273) ───────────────────────────────────
+//
+// A terminal notification failure is persisted here (channel, destination,
+// the alert payload, and the provider error) so operators can inspect the DLQ
+// through an authenticated API/UI, retry a failed delivery (idempotently), or
+// suppress a payload — every action leaving an audit trail in
+// `DeadLetterAudit`. `status`: pending | retried | suppressed.
+model DeadLetter {
+  id           String   @id @default(cuid())
+  deliveryKey  String?
+  paymentId    String?
+  payment      Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel      String
+  destination  String?
+  payload      Json?
+  error        String
+  status       String   @default("pending") // pending | retried | suppressed
+  retryCount   Int      @default(0)
+  failedAt     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  auditLogs    DeadLetterAudit[]
+  sandboxReplays WebhookSandboxReplay[]
+
+  @@index([deliveryKey])
+  @@index([channel])
+  @@index([status])
+  @@index([userId])
+  @@index([failedAt])
+}
+
+// ── Webhook dead-letter sandbox replay (#456) ───────────────────────────────
+//
+// Every POST /dead-letters/:id/replay-sandbox invocation persists one row:
+// the exact request a webhook receiver would have observed (signed headers,
+// resolved payload envelope, body) and the sandbox receiver's mock response
+// (status, headers, body, delay), plus end-to-end timing breakdown. Requests
+// never leave the API process — the receiver is in-memory — so replays are
+// safe to run against any dead letter without risking double-delivery.
+model WebhookSandboxReplay {
+  id              String   @id @default(cuid())
+  deadLetterId    String
+  deadLetter      DeadLetter @relation(fields: [deadLetterId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // sandbox-replay | webhook-ping — what kind of synthetic request was captured
+  replayType      String   @default("sandbox-replay")
+  // Full dispatch envelope that a receiver would have seen (event, data fields)
+  requestEnvelope Json?
+  requestHeaders  Json
+  // Exact bytes of the JSON request body sent to the receiver
+  requestBody     String
+  // Mock receiver response
+  responseStatus  Int
+  responseHeaders Json
+  responseBody    String
+  responseDelayMs Int      @default(0)
+  // Timing breakdown (ms) captured by the in-process receiver
+  durationMs      Int
+  // Sandbox verdict for quick filtering
+  status          String   @default("completed") // completed | failed
+  error           String?
+  createdAt       DateTime @default(now())
+
+  @@index([deadLetterId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model DeadLetterAudit {
+  id           String    @id @default(cuid())
+  deadLetterId String
+  deadLetter   DeadLetter @relation(fields: [deadLetterId], references: [id], onDelete: Cascade)
+  actorUserId  String?
+  action       String    // retry | suppress
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  @@index([deadLetterId])
+  @@index([createdAt])
+}
+
+// ── MFA Recovery Codes (#317) ────────────────────────────────────────────────
+//
+// One-time hashed recovery codes for safe account recovery if an MFA device
+// is lost. Plaintext codes are only displayed upon generation/regeneration.
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  used      Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([codeHash])
+}
+
+// ── Refresh Token Rotation & Reuse Detection (#320) ──────────────────────────
+//
+// Token families with single-use refresh token rotation and breach detection.
+// If a previously consumed refresh token is presented, the entire family is revoked.
+model RefreshSession {
+  id               String                 @id @default(cuid())
+  familyId         String                 @unique
+  userId           String
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentJti       String                 @unique
+  rotationCounter  Int                    @default(1)
+  isRevoked        Boolean                @default(false)
+  revocationReason String?
+  expiresAt        DateTime
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  history          RefreshTokenHistory[]
+
+  @@index([userId])
+  @@index([currentJti])
+  @@index([isRevoked])
+  @@index([expiresAt])
+}
+
+model RefreshTokenHistory {
+  id              String         @id @default(cuid())
+  familyId        String
+  family          RefreshSession @relation(fields: [familyId], references: [familyId], onDelete: Cascade)
+  jti             String         @unique
+  userId          String
+  rotationCounter Int
+  isConsumed      Boolean        @default(false)
+  consumedAt      DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@index([familyId])
+  @@index([jti])
+  @@index([userId])
+}
+

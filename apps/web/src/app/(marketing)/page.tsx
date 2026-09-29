@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { signOut, useSession } from 'next-auth/react';
-import { WalletDTO, PaymentDTO } from '@stellar-alerts/shared';
-import { WatcherForm } from '@/components/WatcherForm';
-import {
-  SummaryStats,
-  WalletList,
-  PaymentTable,
-  NotificationModal,
-} from '@/components/dashboard';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { DIDSignInButton } from '@/components/DIDSignInButton';
 
-export default function Home() {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+
+/** Marketing / landing page. Authenticated visitors are forwarded to the app. */
+export default function LandingPage() {
   const { data: session } = useSession();
+  const router = useRouter();
+
   const [emailInput, setEmailInput] = useState('');
   const [sentEmail, setSentEmail] = useState('');
   const [devMagicUrl, setDevMagicUrl] = useState<string | null>(null);
@@ -22,152 +21,17 @@ export default function Home() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Authenticated Dashboard state
-  const [wallets, setWallets] = useState<WalletDTO[]>([]);
-  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-  const [payments, setPayments] = useState<PaymentDTO[]>([]);
-  const [isLoadingPayments, setIsLoadingPayments] = useState<boolean>(false);
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
-  const [totalVolumeXLM, setTotalVolumeXLM] = useState<number>(0);
-  const [totalPaymentsCount, setTotalPaymentsCount] = useState<number>(0);
-
-  // Helper to get auth headers
-  const getHeaders = useCallback(() => {
-    const headers: Record<string, string> = {};
-    if (session && (session as any).accessToken) {
-      headers['Authorization'] = `Bearer ${(session as any).accessToken}`;
-    }
-    return headers;
-  }, [session]);
-
-  // Fetch wallets
-  const fetchWallets = useCallback(async () => {
-    if (!session) return;
-    try {
-      const res = await fetch('http://localhost:3001/wallets', { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.wallets)) {
-          setWallets(data.wallets);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch wallets:', err);
-    }
-  }, [session, getHeaders]);
-
-  // Fetch payments
-  const fetchPayments = useCallback(async () => {
-    if (!session) return;
-    setIsLoadingPayments(true);
-    try {
-      const url = selectedWalletId
-        ? `http://localhost:3001/payments?walletId=${encodeURIComponent(selectedWalletId)}`
-        : 'http://localhost:3001/payments';
-      const res = await fetch(url, { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.payments)) {
-          setPayments(data.payments);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch payments:', err);
-    } finally {
-      setIsLoadingPayments(false);
-    }
-  }, [session, selectedWalletId, getHeaders]);
-
-  // Fetch summary stats
-  const fetchSummary = useCallback(async () => {
-    if (!session) return;
-    try {
-      const res = await fetch('http://localhost:3001/payments/summary', { headers: getHeaders() });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.summary) {
-          setTotalVolumeXLM(Number(data.summary.totalVolumeXLM || 0));
-          setTotalPaymentsCount(Number(data.summary.totalPayments || 0));
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch summary:', err);
-    }
-  }, [session, getHeaders]);
-
   useEffect(() => {
-    if (session) {
-      fetchWallets();
-      fetchPayments();
-      fetchSummary();
-    }
-  }, [session, selectedWalletId, fetchWallets, fetchPayments, fetchSummary]);
+    if (session) router.replace('/dashboard');
+  }, [session, router]);
 
-  const handleRemoveWallet = async (id: string) => {
-    try {
-      const res = await fetch(`http://localhost:3001/wallets/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      });
-      if (res.ok) {
-        if (selectedWalletId === id) {
-          setSelectedWalletId(null);
-        }
-        fetchWallets();
-        fetchPayments();
-        fetchSummary();
-      }
-    } catch (err) {
-      console.error('Failed to remove wallet:', err);
-    }
-  };
-
-  const handleSavePreferences = async (prefs: { telegramChatId?: string; emailEnabled: boolean }) => {
-    try {
-      await fetch('http://localhost:3001/notifications/preferences', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getHeaders(),
-        },
-        body: JSON.stringify(prefs),
-      });
-    } catch (err) {
-      console.error('Failed to save notification preferences:', err);
-    }
-  };
-
-  // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
 
-  // Demo feed for preview
-  const [demoFeed] = useState([
-    {
-      id: 'tx-1',
-      type: 'create_account',
-      amount: '10,000.0000000',
-      asset: 'XLM',
-      from: 'GAIH3ULLFQ4DGSECF2AR555KZ4KNDGEKN4AFI4SU2M7B43MGK3QJZNSR',
-      txHash: '7685776ceebcb978f1c425797e12ed9d59a69643a4114e48d84f0965f1878ab9',
-      time: 'Just now',
-    },
-    {
-      id: 'tx-2',
-      type: 'payment',
-      amount: '250.0000000',
-      asset: 'USDC',
-      from: 'GCKF65D4G57T7754Y62F76J5W7P3R2A1B0C9D8E7F6G5H4I3J2K1L0M',
-      txHash: 'a8f3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3',
-      time: '2 mins ago',
-    }
-  ]);
-
-  // Handle Requesting Magic Link
   const handleRequestMagicLink = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!emailInput) return;
@@ -176,7 +40,7 @@ export default function Home() {
     setAuthStatus('Sending magic link...');
 
     try {
-      const res = await fetch('http://localhost:3001/auth/request-link', {
+      const res = await fetch(`${API_BASE_URL}/auth/request-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailInput }),
@@ -188,7 +52,7 @@ export default function Home() {
         setAuthStep('sent');
         setResendCooldown(30);
         if (data.token) {
-          setDevMagicUrl(`http://localhost:3000/verify?token=${data.token}`);
+          setDevMagicUrl(`${window.location.origin}/verify?token=${data.token}`);
         }
         setAuthStatus(null);
       } else {
@@ -202,111 +66,6 @@ export default function Home() {
     }
   };
 
-  // If user is authenticated, render the Modular Dashboard
-  if (session) {
-    return (
-      <div className="min-h-screen bg-[#050508] text-gray-100 font-sans selection:bg-cyan-500/30 overflow-x-hidden relative">
-        {/* Dynamic Background Glows */}
-        <div className="fixed inset-0 z-0 pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/15 blur-[160px] mix-blend-screen"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-blue-900/15 blur-[160px] mix-blend-screen"></div>
-        </div>
-
-        {/* Navigation Bar */}
-        <header className="sticky top-0 z-50 bg-[#07070c]/70 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-3 group cursor-pointer">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-[0_0_25px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform duration-300">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-400">
-                Stellar<span className="text-cyan-400">Alerts</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsNotificationModalOpen(true)}
-                className="px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-300 flex items-center gap-2 transition-colors cursor-pointer hover:border-cyan-500/40"
-              >
-                <span>🔔</span> Alert Settings
-              </button>
-              <div className="hidden sm:flex flex-col items-end">
-                <p className="font-semibold text-sm text-gray-200">{session.user?.name || 'Explorer'}</p>
-                <p className="text-xs text-cyan-400/80 font-mono">{session.user?.email}</p>
-              </div>
-              <button
-                onClick={() => signOut()}
-                className="group relative px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-500/50 transition-all duration-300 overflow-hidden cursor-pointer"
-              >
-                <span className="relative z-10 text-sm font-medium text-gray-300 group-hover:text-red-400 transition-colors">Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Main Content */}
-        <main className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
-          {/* Header Banner */}
-          <div className="p-8 rounded-3xl bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                Watcher Service Active
-              </div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">Your Real-Time Wallet Dashboard</h1>
-              <p className="text-gray-400 text-sm mt-1 max-w-xl">
-                Monitor connected Stellar Testnet addresses, track live incoming transactions, and export recorded payment history.
-              </p>
-            </div>
-          </div>
-
-          {/* Modular Component 1: SummaryStats */}
-          <SummaryStats
-            totalPaymentsCount={totalPaymentsCount || payments.length}
-            totalVolumeXLM={totalVolumeXLM}
-            activeWalletsCount={wallets.length}
-          />
-
-          {/* Modular Component 2: WalletList */}
-          <WalletList
-            wallets={wallets}
-            selectedWalletId={selectedWalletId}
-            onSelectWallet={(id) => setSelectedWalletId(id)}
-            onRemoveWallet={handleRemoveWallet}
-            onOpenAddModal={() => {
-              const el = document.getElementById('add-wallet-section');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-          />
-
-          <div id="add-wallet-section" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Watcher Form Card */}
-            <div className="lg:col-span-4 bg-[#0c0c14]/80 backdrop-blur-md rounded-3xl border border-white/10 p-7 shadow-2xl hover:border-cyan-500/30 transition-all duration-500">
-              <WatcherForm onWalletAdded={() => { fetchWallets(); fetchPayments(); fetchSummary(); }} />
-            </div>
-
-            {/* Modular Component 3: PaymentTable */}
-            <div className="lg:col-span-8">
-              <PaymentTable payments={payments} isLoading={isLoadingPayments} />
-            </div>
-          </div>
-        </main>
-
-        {/* Modular Component 4: NotificationModal */}
-        <NotificationModal
-          isOpen={isNotificationModalOpen}
-          onClose={() => setIsNotificationModalOpen(false)}
-          onSavePreferences={handleSavePreferences}
-        />
-      </div>
-    );
-  }
-
-  // Unauthenticated State — World-Class Landing Page
   return (
     <div className="min-h-screen bg-[#030307] text-gray-100 font-sans selection:bg-cyan-500/30 overflow-x-hidden relative">
       {/* Background Ambient Glows & Grid Pattern */}
@@ -359,7 +118,7 @@ export default function Home() {
           <svg className="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          Horizon Network Ingestion • Zero-Delay Alerts
+          Horizon Network Ingestion — Zero-Delay Alerts
         </div>
 
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white max-w-5xl mx-auto leading-[1.1] mb-8">
@@ -376,45 +135,54 @@ export default function Home() {
         {/* Auth Section Card */}
         <div className="max-w-xl mx-auto bg-[#0d0d16]/90 backdrop-blur-2xl p-6 sm:p-8 rounded-3xl border border-white/15 shadow-[0_0_60px_rgba(6,182,212,0.2)] mb-16">
           {authStep === 'input' ? (
-            <form onSubmit={handleRequestMagicLink} className="space-y-4">
-              <div className="text-left">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Enter your email to sign in
-                </label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    required
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="name@example.com"
-                    className="flex-1 px-5 py-3.5 rounded-xl bg-[#141422] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/60 text-sm font-medium transition-all"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoadingAuth}
-                    className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {isLoadingAuth ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        Send Magic Link
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </>
-                    )}
-                  </button>
+            <div className="space-y-5">
+              <form onSubmit={handleRequestMagicLink} className="space-y-4">
+                <div className="text-left">
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    Enter your email to sign in
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="name@example.com"
+                      className="flex-1 px-5 py-3.5 rounded-xl bg-[#141422] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/60 text-sm font-medium transition-all"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoadingAuth}
+                      className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingAuth ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          Send Magic Link
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
+
+                {authStatus && (
+                  <p className="text-xs text-red-400 font-medium text-left">{authStatus}</p>
+                )}
+              </form>
+
+              <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-gray-500">
+                <span className="h-px flex-1 bg-white/10"></span>
+                or use a wallet
+                <span className="h-px flex-1 bg-white/10"></span>
               </div>
 
-              {authStatus && (
-                <p className="text-xs text-red-400 font-medium text-left">{authStatus}</p>
-              )}
-            </form>
+              <DIDSignInButton />
+            </div>
           ) : (
-            /* Check Your Inbox UI State (No Token Copying Needed!) */
             <div className="space-y-6 text-center animate-in zoom-in-95 duration-500">
               <div className="relative w-16 h-16 mx-auto">
                 <div className="absolute inset-0 rounded-2xl bg-cyan-500/30 blur-lg animate-pulse"></div>
@@ -458,7 +226,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Dev Mode Instant 1-Click Verification Trigger */}
               {devMagicUrl && (
                 <div className="mt-4 pt-4 border-t border-white/10 text-left bg-cyan-950/30 p-4 rounded-2xl border border-cyan-500/20 space-y-2">
                   <div className="flex items-center justify-between">
@@ -472,7 +239,7 @@ export default function Home() {
                     href={devMagicUrl}
                     className="block w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs text-center shadow-lg transition-all cursor-pointer"
                   >
-                    ⚡ Click to Authenticate Instantly
+                    Click to Authenticate Instantly
                   </a>
                 </div>
               )}
@@ -489,25 +256,24 @@ export default function Home() {
               </button>
             </div>
           )}
-        </div>
 
-        {/* Feature Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto pt-6 border-t border-white/10">
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-2xl font-extrabold text-cyan-400">100%</h4>
-            <p className="text-xs text-gray-400 font-medium mt-1">Non-Custodial Security</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-2xl font-extrabold text-blue-400">&lt; 2s</h4>
-            <p className="text-xs text-gray-400 font-medium mt-1">Horizon Alert Latency</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-2xl font-extrabold text-indigo-400">Multi-Channel</h4>
-            <p className="text-xs text-gray-400 font-medium mt-1">Telegram, Email & Webhooks</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-            <h4 className="text-2xl font-extrabold text-emerald-400">Zero</h4>
-            <p className="text-xs text-gray-400 font-medium mt-1">Private Keys Stored</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 mt-6 border-t border-white/10">
+            <div className="rounded-xl bg-white/5 border border-white/5 p-3">
+              <h4 className="text-lg font-extrabold text-cyan-400">100%</h4>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">Non-Custodial</p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/5 p-3">
+              <h4 className="text-lg font-extrabold text-blue-400">&lt; 2s</h4>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">Alert Latency</p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/5 p-3">
+              <h4 className="text-lg font-extrabold text-indigo-400">Multi</h4>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">Channels</p>
+            </div>
+            <div className="rounded-xl bg-white/5 border border-white/5 p-3">
+              <h4 className="text-lg font-extrabold text-emerald-400">Zero</h4>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">Keys Stored</p>
+            </div>
           </div>
         </div>
       </section>
@@ -530,40 +296,10 @@ export default function Home() {
             </span>
           </div>
 
-          <div className="space-y-4">
-            {demoFeed.map((item) => (
-              <div key={item.id} className="p-5 rounded-2xl bg-[#121222]/80 border border-white/10 hover:border-cyan-500/40 transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-base">+{item.amount} {item.asset}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 font-semibold border border-cyan-500/20">{item.type}</span>
-                    </div>
-                    <p className="text-xs font-mono text-gray-400 mt-1">From: {item.from.substring(0, 12)}...{item.from.substring(item.from.length - 8)}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col md:items-end gap-1 text-xs">
-                  <span className="text-gray-400 font-medium">{item.time}</span>
-                  <a
-                    href={`https://stellar.expert/explorer/testnet/tx/${item.txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-cyan-400 hover:text-cyan-300 font-mono underline flex items-center gap-1"
-                  >
-                    Tx: {item.txHash.substring(0, 8)}...
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                </div>
-              </div>
-            ))}
+          <div className="rounded-2xl bg-[#121222]/60 border border-white/10 p-8 text-center">
+            <p className="text-xs text-gray-500">
+              Sign in and add a watch-only <code className="text-cyan-300 font-mono">G...</code> address to see live payments here.
+            </p>
           </div>
         </div>
       </section>
@@ -692,31 +428,41 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white">Sign In to StellarAlerts</h3>
-              <p className="text-xs text-gray-400 mt-1">Enter your email to receive a passwordless magic link.</p>
+              <p className="text-xs text-gray-400 mt-1">Passwordless email magic link or sign with your Stellar wallet.</p>
             </div>
 
             {authStep === 'input' ? (
-              <form onSubmit={handleRequestMagicLink} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="name@example.com"
-                    className="w-full px-4 py-3 rounded-xl bg-[#141422] border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-cyan-500/60"
-                  />
+              <div className="space-y-5">
+                <form onSubmit={handleRequestMagicLink} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full px-4 py-3 rounded-xl bg-[#141422] border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-cyan-500/60"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoadingAuth}
+                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:from-cyan-400 hover:to-blue-500 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isLoadingAuth ? 'Sending...' : 'Send Magic Link'}
+                  </button>
+                </form>
+
+                <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-gray-500">
+                  <span className="h-px flex-1 bg-white/10"></span>
+                  or use a wallet
+                  <span className="h-px flex-1 bg-white/10"></span>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoadingAuth}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm shadow-lg hover:from-cyan-400 hover:to-blue-500 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {isLoadingAuth ? 'Sending...' : 'Send Magic Link'}
-                </button>
-              </form>
+                <DIDSignInButton onAuthenticated={() => setShowAuthModal(false)} />
+              </div>
             ) : (
               <div className="space-y-4 text-center">
                 <div className="w-12 h-12 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center mx-auto">
@@ -732,7 +478,7 @@ export default function Home() {
                     href={devMagicUrl}
                     className="block w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs text-center shadow-lg transition-all cursor-pointer mt-2"
                   >
-                    ⚡ Click to Authenticate Instantly (Dev)
+                    Click to Authenticate Instantly (Dev)
                   </a>
                 )}
               </div>
@@ -752,7 +498,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-white">StellarAlerts</span>
-            <span className="text-xs text-gray-500">— Non-Custodial Stellar Payment Tracker</span>
+            <span className="text-xs text-gray-500">Non-Custodial Stellar Payment Tracker</span>
           </div>
           <p className="text-xs text-gray-500">Released under the MIT License</p>
         </div>

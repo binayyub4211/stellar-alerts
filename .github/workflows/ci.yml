@@ -6,9 +6,142 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: Build, Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: stellar_alerts
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        working-directory: apps/api
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
+
+      - name: Verify generated OpenAPI types are up to date
+        run: npm run generate:types:check
+
+      - name: Build Shared Package (@stellar-alerts/shared)
+        run: npx tsc -p packages/shared/tsconfig.json
+
+      - name: Typecheck Backend (apps/api)
+        run: npx tsc -p apps/api/tsconfig.json --noEmit
+
+      - name: Typecheck Frontend (apps/web)
+        run: npx tsc -p apps/web/tsconfig.json --noEmit
+
+      - name: Push Prisma Schema (test database)
+        run: npm run db:push
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
+
+      - name: Run API Unit Tests
+        run: npm run test:api
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
+          REDIS_URL: "redis://localhost:6379"
+          JWT_SECRET: "ci-unit-test-secret-key-min-32-chars!!"
+          MASTER_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          NODE_ENV: "test"
+
+      - name: Run Web Lint
+        run: npm run lint --workspace=web
+
+      - name: Run Web Unit Tests
+        run: npm run test --workspace=web
+
+      - name: Build Web Application
+        run: npm run build --workspace=web
+        env:
+          NEXTAUTH_SECRET: "ci-build-dummy-secret-key-123456"
+          NEXT_PUBLIC_API_URL: "http://localhost:3001"
+
+  migration-shadow-verification:
+    name: Prisma Migration Shadow-Database Verification
+    runs-on: ubuntu-latest
+
+    # Uses its own throwaway Postgres service container, separate from
+    # `validate`'s, since scripts/verify-migrations-shadow.ts creates and
+    # drops disposable databases on it (CREATE DATABASE / DROP DATABASE) as
+    # part of shadow-verifying each migration — kept isolated from the
+    # `validate` job's Postgres so a concurrent DROP DATABASE here can never
+    # race against `validate`'s own test-database usage.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Unit test the verification scripts themselves
+        run: npm run test:scripts
+
+      - name: Static migration lint
+        run: npm run verify:migrations
+
+      - name: Shadow-database migration verification
+        run: npm run verify:migrations:shadow
+        env:
+          SHADOW_DATABASE_URL: "postgresql://user:password@localhost:5432/postgres"
+
+  chaos:
+    name: Chaos Engineering Fault Injection Suite
     runs-on: ubuntu-latest
 
     steps:
@@ -22,22 +155,44 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        working-directory: apps/api
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
 
       - name: Build Shared Package (@stellar-alerts/shared)
         run: npx tsc -p packages/shared/tsconfig.json
 
-      - name: Typecheck Backend (apps/api)
-        run: npx tsc -p apps/api/tsconfig.json --noEmit
+      # docker-compose.yml port-maps toxiproxy and points it at the host via
+      # host.docker.internal (an extra_hosts host-gateway entry), since the
+      # chaos suite's fixture server binds to localhost on the runner, not
+      # inside the toxiproxy container.
+      - name: Start Toxiproxy
+        run: docker compose up -d toxiproxy
 
-      - name: Typecheck Frontend (apps/web)
-        run: npx tsc -p apps/web/tsconfig.json --noEmit
+      - name: Wait for Toxiproxy to be ready
+        run: |
+          for i in $(seq 1 1 30); do
+            if curl -sf http://localhost:8474/version > /dev/null; then
+              echo "Toxiproxy is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Toxiproxy did not become ready in time" >&2
+          docker compose logs toxiproxy
+          exit 1
 
-      - name: Run Vitest Unit Tests
-        run: npm run test:api
-
-      - name: Build Web Application
-        run: npm run build --workspace=web
+      - name: Run Chaos Test Suite
+        working-directory: apps/api
+        run: npx vitest run src/__tests__/chaos.test.ts
         env:
-          NEXTAUTH_SECRET: "ci-build-dummy-secret-key-12345"
-          NEXT_PUBLIC_API_URL: "http://localhost:3001"
+          TOXIPROXY_URL: http://localhost:8474
+          TOXIPROXY_UPSTREAM_HOST: host.docker.internal
+
+      - name: Stop Toxiproxy
+        if: always()
+        run: docker compose down toxiproxy || true
