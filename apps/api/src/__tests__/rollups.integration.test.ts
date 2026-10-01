@@ -75,7 +75,7 @@ describe('Payment rollups integration', async () => {
 
     // Query daily rollup for next day
     const dr = await client.query(
-      'SELECT "tx_count", "total_amount" FROM "payment_daily_rollup" WHERE "walletId" = $1 AND "day_start" = date_trunc('day', $2::timestamptz) AT TIME ZONE 'UTC'',
+      `SELECT "tx_count", "total_amount" FROM "payment_daily_rollup" WHERE "walletId" = $1 AND "day_start" = (date_trunc('day', $2::timestamptz) AT TIME ZONE 'UTC')`,
       [walletId, nextDay.toISOString()]
     );
 

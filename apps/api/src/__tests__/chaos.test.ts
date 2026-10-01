@@ -73,7 +73,7 @@ describe.skipIf(!TOXIPROXY_URL)('Chaos engineering: Toxiproxy fault injection', 
       res.writeHead(200, { 'Content-Type': 'text/plain' });
       res.end('ok');
     });
-    await new Promise<void>((resolve) => upstreamServer.listen(0, '127.0.0.1', () => resolve()));
+    await new Promise<void>((resolve) => upstreamServer.listen(0, '0.0.0.0', () => resolve()));
     upstreamPort = (upstreamServer.address() as AddressInfo).port;
 
     toxiproxy = new Toxiproxy(TOXIPROXY_URL!);

@@ -35,7 +35,7 @@ function resolveWorkerScript(filename: string): { scriptPath: string; execArgv: 
   const ext = isTs ? '.ts' : '.js';
   return {
     scriptPath: path.join(__dirname, `${filename}${ext}`),
-    execArgv: isTs ? [' --require', 'tsx/cjs', '--expose-gc'] : ['--expose-gc'],
+    execArgv: isTs ? ['--require', 'tsx/cjs', '--expose-gc'] : ['--expose-gc'],
   };
 }
 
