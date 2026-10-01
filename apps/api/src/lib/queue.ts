@@ -1,10 +1,9 @@
 import { Queue, QueueEvents, Job, Worker } from 'bullmq';
 import CircuitBreaker from 'opossum';
-import { Resend } from 'resend';
 import { env } from '../config/env';
 import { fetchWithTimeout, withDeadline } from './external-request';
 import { workerFairnessManager } from './rate-budget';
-import { registerRedisCleanupTask } from './redis';
+import { registerRedisCleanupTask, redisCache } from './redis';
 import { cryptoVault } from '../utils/crypto-vault';
 import { applyWebhookPayloadTemplate } from '../utils/payload-template';
 import { adaptiveWebhookRateLimiter, waitForAdaptiveBackoff } from '../utils/rate-limiter';
@@ -18,6 +17,9 @@ import { validateUrlForSsrf } from '../utils/ssrf';
 import { decryptPersonalField } from '../utils/privacy';
 import { dispatchWhatsAppAlert } from '../utils/whatsapp';
 import { emailService } from '../services/email.service';
+import { dispatchDiscordAlert } from '../utils/discord';
+import { dispatchSlackAlert, isValidSlackWebhookUrl } from '../utils/slack';
+import { dispatchPushNotification, PushNotificationData } from '../utils/push-protocol';
 
 function decryptWebhookSecret(webhook: {
   keyVersion: number;
@@ -60,8 +62,38 @@ export let dlqQueue: Queue<AlertJobData> | null = null;
 export let alertQueueEvents: QueueEvents | null = null;
 export let alertWorker: Worker<AlertJobData> | null = null;
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_123");
 const circuitBreakers = new Map<string, CircuitBreaker<any>>();
+
+interface CircuitBreakerState {
+  state: "closed" | "open" | "half-open";
+  failureCount: number;
+  openedAt?: number;
+  lastFailureAt?: number;
+}
+
+const CIRCUIT_BREAKER_REDIS_PREFIX = "circuit_breaker:";
+
+async function syncCircuitBreakerStateToRedis(webhookId: string, state: CircuitBreakerState): Promise<void> {
+  try {
+    const key = `${CIRCUIT_BREAKER_REDIS_PREFIX}${webhookId}`;
+    const value = JSON.stringify(state);
+    await redisCache.set(key, value, 3600); // 1 hour TTL
+  } catch (error: any) {
+    console.error(`[CircuitBreaker] Failed to sync state to Redis for webhook ${webhookId}: ${error.message}`);
+  }
+}
+
+async function loadCircuitBreakerStateFromRedis(webhookId: string): Promise<CircuitBreakerState | null> {
+  try {
+    const key = `${CIRCUIT_BREAKER_REDIS_PREFIX}${webhookId}`;
+    const value = await redisCache.get(key);
+    if (!value) return null;
+    return JSON.parse(value) as CircuitBreakerState;
+  } catch (error: any) {
+    console.error(`[CircuitBreaker] Failed to load state from Redis for webhook ${webhookId}: ${error.message}`);
+    return null;
+  }
+}
 
 export function buildTelegramPaymentCard(data: AlertJobData): string {
   const escapeHtml = (value: string) => value.replace(/[&<>\"']/g, (char) => ({
@@ -78,6 +110,31 @@ export function buildTelegramPaymentCard(data: AlertJobData): string {
 
 function isPublicChannel(chatId: string): boolean {
   return chatId.startsWith('@') || chatId.startsWith('-100');
+}
+
+/**
+ * Records a channel delivery attempt and skips re-dispatching a channel that
+ * already has a logged attempt for this payment, so BullMQ's job-level retry
+ * (5 attempts, exponential backoff — see alertQueue config) doesn't double-send
+ * to Discord/Slack on retry once a prior attempt already succeeded.
+ */
+async function alreadyDelivered(paymentId: string, channel: string): Promise<boolean> {
+  const existing = await prisma.deliveryLog.findUnique({
+    where: { paymentId_channel: { paymentId, channel } },
+  });
+  return existing?.status === 'sent';
+}
+
+async function recordDelivery(paymentId: string, channel: string, ok: boolean, error?: string) {
+  await prisma.deliveryLog.upsert({
+    where: { paymentId_channel: { paymentId, channel } },
+    create: { paymentId, channel, status: ok ? 'sent' : 'failed', error: error ?? null, attempt: 1 },
+    update: {
+      status: ok ? 'sent' : 'failed',
+      error: error ?? null,
+      attempt: { increment: 1 },
+    },
+  });
 }
 
 async function assertBotIsChannelAdmin(botToken: string, chatId: string): Promise<void> {
@@ -112,7 +169,7 @@ async function getOrCreateCircuitBreaker(
     return circuitBreakers.get(webhookId)!;
   }
 
-  const breaker = new CircuitBreaker(
+  const breaker: CircuitBreaker<any> = new CircuitBreaker(
     async (url: string, payload: string, headers: Record<string, string>) => {
       const response = await fetchWithTimeout(
         url,
@@ -151,6 +208,42 @@ async function getOrCreateCircuitBreaker(
     },
   );
 
+  // Initialize with Redis sync
+  const redisState = await loadCircuitBreakerStateFromRedis(webhookId);
+  if (redisState) {
+    if (redisState.state === "open") {
+      breaker.open();
+    } else if (redisState.state === "half-open") {
+      breaker.halfOpen();
+    } else {
+      breaker.close();
+    }
+    console.log(`[CircuitBreaker] Initialized webhook ${webhookId} with Redis state: ${redisState.state}`);
+  }
+
+  // Add event listeners to sync state changes to Redis
+  breaker.on('open', () => {
+    syncCircuitBreakerStateToRedis(webhookId, {
+      state: 'open',
+      failureCount: CIRCUIT_BREAKER_THRESHOLD,
+      openedAt: Date.now(),
+    });
+  });
+
+  breaker.on('halfOpen', () => {
+    syncCircuitBreakerStateToRedis(webhookId, {
+      state: 'half-open',
+      failureCount: 0,
+    });
+  });
+
+  breaker.on('close', () => {
+    syncCircuitBreakerStateToRedis(webhookId, {
+      state: 'closed',
+      failureCount: 0,
+    });
+  });
+
   circuitBreakers.set(webhookId, breaker);
   return breaker;
 }
@@ -174,6 +267,14 @@ async function updateCircuitBreakerState(
       lastFailureAt: state === "open" ? new Date() : undefined,
       openedAt: state === "open" ? new Date() : undefined,
     },
+  });
+
+  // Sync to Redis for distributed state sharing
+  await syncCircuitBreakerStateToRedis(webhookId, {
+    state,
+    failureCount,
+    openedAt: state === "open" ? Date.now() : undefined,
+    lastFailureAt: state === "open" ? Date.now() : undefined,
   });
 }
 
@@ -652,6 +753,53 @@ export async function processAlertDispatch(data: AlertJobData) {
       }
     }
 
+    // Dispatch Discord alert if configured
+    if (wallet?.user?.notifyPrefs?.discordEnabled && wallet.user.notifyPrefs.discordWebhookUrl) {
+      try {
+        if (!(await alreadyDelivered(data.paymentId, 'discord'))) {
+          const ok = await dispatchDiscordAlert(wallet.user.notifyPrefs.discordWebhookUrl, {
+            paymentId: data.paymentId,
+            txHash: data.txHash,
+            amount: data.amount,
+            asset: data.asset,
+            assetIssuer: data.assetIssuer,
+            fromAddress: data.fromAddress,
+            receivedAt: data.receivedAt,
+          });
+          await recordDelivery(data.paymentId, 'discord', ok, ok ? undefined : 'webhook returned non-ok status');
+          if (ok) {
+            console.log(`[Worker] Sent Discord alert for ${data.paymentId}`);
+          } else {
+            console.warn(`[Worker] Failed to send Discord alert for ${data.paymentId}`);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[Worker] Discord dispatch error for ${data.paymentId}: ${err.message}`);
+        await recordDelivery(data.paymentId, 'discord', false, err.message);
+      }
+    }
+
+    // Dispatch Slack alert if configured
+    if (wallet?.user?.notifyPrefs?.slackEnabled && wallet.user.notifyPrefs.slackWebhookUrl) {
+      try {
+        const webhookUrl = wallet.user.notifyPrefs.slackWebhookUrl;
+        if (!isValidSlackWebhookUrl(webhookUrl)) {
+          console.warn(`[Worker] Skipping Slack dispatch for ${data.paymentId}: invalid webhook URL`);
+        } else if (!(await alreadyDelivered(data.paymentId, 'slack'))) {
+          const ok = await dispatchSlackAlert(webhookUrl, data);
+          await recordDelivery(data.paymentId, 'slack', ok, ok ? undefined : 'webhook returned non-ok status');
+          if (ok) {
+            console.log(`[Worker] Sent Slack alert for ${data.paymentId}`);
+          } else {
+            console.warn(`[Worker] Failed to send Slack alert for ${data.paymentId}`);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[Worker] Slack dispatch error for ${data.paymentId}: ${err.message}`);
+        await recordDelivery(data.paymentId, 'slack', false, err.message);
+      }
+    }
+
     // Send email alert via emailService (Issue #263)
     const recipientEmail = wallet?.user?.email || (data.fromAddress.includes('@') ? data.fromAddress : null);
     if (recipientEmail) {
@@ -683,6 +831,47 @@ export async function processAlertDispatch(data: AlertJobData) {
       ).catch(async (err: any) => {
         console.warn(`[Worker] Email dispatch error: ${err.message}`);
         await recordDeadLetter('email', recipientEmail, err);
+        if (err.isRetriable) {
+          throw err;
+        }
+        return null;
+      });
+    }
+
+    // Dispatch Push Protocol alert if user configured push preferences (#253)
+    const pushEnabled = wallet?.user?.notifyPrefs?.pushEnabled;
+    const pushDestination = wallet?.user?.notifyPrefs?.pushChannelAddress || wallet?.publicKey;
+    if (pushEnabled && pushDestination) {
+      await deliverWithIdempotency(
+        {
+          paymentId: data.paymentId,
+          channel: "push",
+          destination: pushDestination,
+          userId,
+        },
+        async () => {
+          await workerFairnessManager.acquireProviderBudget('push');
+          const pushData: PushNotificationData = {
+            paymentId: data.paymentId,
+            txHash: data.txHash,
+            amount: data.amount,
+            asset: data.asset,
+            assetIssuer: data.assetIssuer,
+            fromAddress: data.fromAddress,
+            recipientAddress: pushDestination,
+            receivedAt: data.receivedAt,
+          };
+          const ok = await dispatchPushNotification(pushDestination, pushData);
+          if (!ok) {
+            const err: any = new Error(`Push Protocol dispatch failed for recipient ${pushDestination}`);
+            err.isRetriable = true;
+            throw err;
+          }
+          return { success: true };
+        }
+      ).catch(async (err: any) => {
+        console.warn(`[Worker] Push Protocol dispatch error: ${err.message}`);
+        await recordDeadLetter('push', pushDestination, err);
         if (err.isRetriable) {
           throw err;
         }

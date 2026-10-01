@@ -15,6 +15,7 @@ import { withWalletLock } from '../lib/lock';
 import { shouldAlert, PaymentContext } from '../lib/rules-engine';
 import { evaluateAndDispatch, AlertRuleRecord, NormalizedPaymentEvent } from '../lib/alert-rule-evaluator';
 import { MemoryMonitor, MemorySnapshot } from '../utils/memory-monitor';
+import { appendPaymentChecksum } from '../services/checksumChain.service';
 import { createLogger } from '../lib/logger';
 import { WorkerLifecycleManager } from '../lib/worker-lifecycle';
 import { trace, SpanStatusCode, TraceFlags } from '@opentelemetry/api';
@@ -136,6 +137,20 @@ export async function processPaymentRecord(
       }
 
       if (isNewPayment && payment) {
+        // Best-effort, non-throwing by design (see services/checksumChain.service.ts):
+        // a checksum-chain bug must never block real payment ingestion/alerting.
+        await appendPaymentChecksum({
+          id: payment.id,
+          txHash,
+          walletId: wallet.id,
+          fromAddress,
+          amount: Number(amount),
+          asset,
+          assetIssuer,
+          memo,
+          receivedAt,
+        });
+
         if (wallet.userId) {
           await publishPaymentEvent(wallet.userId, payment);
         }
@@ -470,6 +485,15 @@ export type StartHorizonSSEStreamOptions = {
   connector?: StreamConnector;
   reconnectDelayMs?: number;
   maxReconnectAttempts?: number;
+  maxReconnectDelayMs?: number;
+  maxQueuedMessages?: number;
+};
+
+export const streamMetrics = {
+  reconnects: 0,
+  heartbeatTimeouts: 0,
+  messagesProcessed: 0,
+  backpressureDropped: 0,
 };
 
 export async function startHorizonSSEStream(
@@ -493,6 +517,31 @@ export async function startHorizonSSEStream(
 
     const maxAttempts = options.maxReconnectAttempts ?? Infinity;
     const reconnectDelay = options.reconnectDelayMs ?? 1000;
+    const maxReconnectDelay = options.maxReconnectDelayMs ?? reconnectDelay * 30;
+    const maxQueuedMessages = options.maxQueuedMessages ?? 50;
+
+    // Bounded backpressure: process messages one at a time in arrival order so a
+    // slow consumer (e.g. a slow DB write) never lets concurrent handler calls pile
+    // up. Once maxQueuedMessages are waiting behind the in-flight one, further
+    // messages are dropped (and counted) rather than buffered without limit.
+    let queueLength = 0;
+    let processingChain: Promise<void> = Promise.resolve();
+    const enqueueMessage = (task: () => Promise<void>): Promise<void> => {
+      if (queueLength >= maxQueuedMessages) {
+        streamMetrics.backpressureDropped++;
+        console.warn(`[WatcherStream] ⚠️ Backpressure limit reached (${maxQueuedMessages}); dropping message for ${wallet.publicKey.substring(0, 8)}...`);
+        return Promise.resolve();
+      }
+      queueLength++;
+      const run = processingChain
+        .then(task)
+        .catch((err) => console.error(`[WatcherStream] Error processing queued message: ${err.message}`))
+        .finally(() => {
+          queueLength--;
+        });
+      processingChain = run;
+      return run;
+    };
 
     const defaultConnector: StreamConnector = (cursor, handlers) => {
       return stellar.server
@@ -524,6 +573,7 @@ export async function startHorizonSSEStream(
     const resetHeartbeat = () => {
       if (heartbeatTimeout) clearTimeout(heartbeatTimeout);
       heartbeatTimeout = setTimeout(() => {
+        streamMetrics.heartbeatTimeouts++;
         console.warn(`[WatcherStream] ⚠️ Heartbeat timeout for ${wallet.publicKey.substring(0, 8)}... Reconnecting...`);
         connect();
       }, 60000);
@@ -542,21 +592,30 @@ export async function startHorizonSSEStream(
           onmessage: async (record: any) => {
             resetHeartbeat();
             attempts = 1;
-            console.log(`[WatcherStream] ⚡ Live SSE stream message received: ${record.type}`);
-            await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
-            if (record.paging_token) {
-              lastPagingToken = record.paging_token;
-            }
+            await enqueueMessage(async () => {
+              console.log(`[WatcherStream] ⚡ Live SSE stream message received: ${record.type}`);
+              // processPaymentRecord already persists the cursor internally
+              // (with gap detection, when given previousPagingToken) - a
+              // second saveCursor() call here would be redundant and would
+              // skip gap detection by omitting previousPagingToken.
+              await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
+              if (record.paging_token) {
+                lastPagingToken = record.paging_token;
+              }
+              streamMetrics.messagesProcessed++;
+            });
           },
           onerror: (error: any) => {
             console.error(`[WatcherStream] SSE stream error for ${wallet.publicKey.substring(0, 8)}...:`, error);
             cleanupCurrent();
             if (isClosed) return;
             if (attempts < maxAttempts) {
+              const delay = Math.min(reconnectDelay * 2 ** (attempts - 1), maxReconnectDelay);
               attempts++;
+              streamMetrics.reconnects++;
               reconnectTimeout = setTimeout(() => {
                 connect();
-              }, reconnectDelay);
+              }, delay);
             }
           },
         };

@@ -3,6 +3,7 @@ import { buildApp } from './app';
 import { prisma, connectWithRetry } from './lib/prisma';
 import { startTelemetry, shutdownTelemetry } from './lib/telemetry';
 import { closeRedisConnections } from './lib/redis';
+import { createGrpcServer } from './modules/grpc/grpc.server';
 
 const start = async () => {
   try {
@@ -14,9 +15,22 @@ const start = async () => {
     await app.listen({ port, host: '0.0.0.0' });
     console.log(`🚀 Server listening on http://localhost:${port}`);
 
+    const grpcServer = createGrpcServer(50051);
+    grpcServer.start();
+
     if (process.env.START_WORKER !== 'false') {
       const { runWatcher } = await import('./workers/watcher.worker');
       runWatcher().catch((err) => console.error('⚠️ Watcher worker error:', err));
+    }
+
+    // Without a dedicated export worker, exports run in-process (see
+    // lib/export-queue.ts), so expiry/cleanup has to run here too.
+    if (env.EXPORT_WORKER_ENABLED !== 'true') {
+      const { exportsService } = await import('./modules/exports/exports.service');
+      const cleanupExports = () =>
+        exportsService.cleanupExpiredExports().catch((err) => console.error('⚠️ Export cleanup error:', err));
+      void cleanupExports();
+      setInterval(cleanupExports, env.EXPORT_CLEANUP_INTERVAL_MS).unref();
     }
 
     const shutdown = async () => {
@@ -26,11 +40,17 @@ const start = async () => {
         process.exit(1);
       }, 5000);
 
+      try {
+        grpcServer.stop();
+      } catch (err) {
+        console.error('Error stopping gRPC server:', err);
+      }
+      
       await app.close();
       await prisma.$disconnect();
       await shutdownTelemetry();
       await closeRedisConnections();
-      console.log('✅ Server, Prisma, and Redis closed cleanly');
+      console.log('✅ Server, gRPC, Prisma, and Redis closed cleanly');
       process.exit(0);
     };
 

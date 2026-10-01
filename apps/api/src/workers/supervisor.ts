@@ -142,8 +142,20 @@ export function startSupervisor(): WorkerSupervisor {
     supervisor.spawn('staking-reward', 'staking-reward.worker');
   }
 
+  if (env.EXPORT_WORKER_ENABLED === 'true') {
+    supervisor.spawn('exports', 'export.worker');
+  }
+
   if ((env as any).SOROBAN_SAC_WORKER_ENABLED === 'true') {
     supervisor.spawn('soroban-sac', 'soroban-sac.worker');
+  }
+
+  if ((env as any).SOROBAN_RESTORATION_WORKER_ENABLED === 'true') {
+    supervisor.spawn('soroban-restoration', 'soroban-restoration.worker');
+  }
+
+  if ((env as any).MULTISIG_INACTIVITY_WORKER_ENABLED === 'true') {
+    supervisor.spawn('multisig-inactivity', 'multisig-inactivity-watcher.worker');
   }
 
   return supervisor;

@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { buildDeliveryKey } from '../../lib/delivery';
-import { processAlertDispatch, type AlertJobData } from '../../lib/queue';
+import { processAlertDispatch } from '../../lib/queue';
+import { toAlertJobData } from './dead-letters.envelope';
 
 export interface DeadLetterListParams {
   channel?: string;
@@ -14,33 +15,6 @@ export interface DeadLetterListParams {
 export interface ReplayResult {
   success: boolean;
   message: string;
-}
-
-/**
- * Extracts the canonical `AlertJobData` that processAlertDispatch needs from a
- * dead letter's stored payload. Queue-channel dead letters persist the raw job
- * data; channel dead letters (telegram/email/webhook) persist the webhook
- * payload envelope with the payment fields under `data`.
- */
-function toAlertJobData(payload: unknown): AlertJobData | null {
-  if (!payload || typeof payload !== 'object') return null;
-  const value = payload as Record<string, any>;
-
-  const candidate = value.walletId && value.txHash ? value : value.data ?? null;
-  if (!candidate || typeof candidate !== 'object') return null;
-
-  if (typeof candidate.paymentId !== 'string') return null;
-  return {
-    paymentId: candidate.paymentId,
-    txHash: candidate.txHash ?? 'unknown',
-    walletId: candidate.walletId ?? '',
-    amount: typeof candidate.amount === 'string' ? candidate.amount : String(candidate.amount ?? '0'),
-    asset: candidate.asset ?? 'XLM',
-    assetIssuer: candidate.assetIssuer ?? null,
-    fromAddress: candidate.fromAddress ?? '',
-    receivedAt: candidate.receivedAt ?? new Date().toISOString(),
-    requestId: undefined,
-  };
 }
 
 export class DeadLettersService {

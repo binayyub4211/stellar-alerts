@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { KeyRotationManager } from '../../utils/key-rotation-manager';
 import { cryptoVault } from '../../utils/crypto-vault';
 import { validateUrlForSsrf, ssrfSafeFetch } from '../../utils/ssrf';
+import { dynamicPayloadTransformer, PayloadTransformationRule } from './payload-transformer';
 
 export interface WebhookTestResult {
   success: boolean;
@@ -177,14 +178,20 @@ export class WebhooksService {
     ].join(':');
     const secret = cryptoVault.decrypt(encrypted);
 
-    const payload = JSON.stringify({
+    let rawPayload: Record<string, any> = {
       event: 'webhook.ping',
       timestamp: new Date().toISOString(),
       data: {
         webhookId: webhook.id,
         message: 'Test ping dispatched from Stellar Alerts',
       },
-    });
+    };
+
+    if (webhook.payloadTemplate) {
+      rawPayload = dynamicPayloadTransformer.transform(rawPayload, webhook.payloadTemplate);
+    }
+
+    const payload = JSON.stringify(rawPayload);
 
     if (!this.keyRotationManager.getKeyState(webhook.id)) {
       this.keyRotationManager.setKeyState(webhook.id, { activeSecret: secret });
