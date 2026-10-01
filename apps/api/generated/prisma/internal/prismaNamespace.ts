@@ -412,6 +412,7 @@ export const ModelName = {
   Webhook: 'Webhook',
   WebhookLog: 'WebhookLog',
   WebhookCircuitBreaker: 'WebhookCircuitBreaker',
+  ExportJob: 'ExportJob',
   SorobanEventSnapshot: 'SorobanEventSnapshot',
   SorobanStateAudit: 'SorobanStateAudit',
   SorobanContractSubscription: 'SorobanContractSubscription',
@@ -449,7 +450,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "wallet" | "ingestionCursor" | "payment" | "notificationPreference" | "deliveryLog" | "paymentChecksum" | "dailyChecksumRoot" | "alertRule" | "alertRuleDispatchLog" | "telegramSyncCode" | "whatsAppDeliveryLog" | "webhook" | "webhookLog" | "webhookCircuitBreaker" | "sorobanEventSnapshot" | "sorobanStateAudit" | "sorobanContractSubscription" | "sacTokenMintBurnEvent" | "sacTokenSupply" | "multisigTreasury" | "multisigSignerWatcher" | "pendingMultisigTransaction" | "anchorTransactionWatch" | "dexSwapWatch" | "sorobanTopicIndex" | "sorobanTopicIndexCursor" | "dexSwapEvent" | "securityAuditLog" | "notificationDelivery" | "notificationDeliveryAttempt" | "deadLetter" | "webhookSandboxReplay" | "deadLetterAudit" | "mfaRecoveryCode" | "refreshSession" | "refreshTokenHistory"
+    modelProps: "user" | "wallet" | "ingestionCursor" | "payment" | "notificationPreference" | "deliveryLog" | "paymentChecksum" | "dailyChecksumRoot" | "alertRule" | "alertRuleDispatchLog" | "telegramSyncCode" | "whatsAppDeliveryLog" | "webhook" | "webhookLog" | "webhookCircuitBreaker" | "exportJob" | "sorobanEventSnapshot" | "sorobanStateAudit" | "sorobanContractSubscription" | "sacTokenMintBurnEvent" | "sacTokenSupply" | "multisigTreasury" | "multisigSignerWatcher" | "pendingMultisigTransaction" | "anchorTransactionWatch" | "dexSwapWatch" | "sorobanTopicIndex" | "sorobanTopicIndexCursor" | "dexSwapEvent" | "securityAuditLog" | "notificationDelivery" | "notificationDeliveryAttempt" | "deadLetter" | "webhookSandboxReplay" | "deadLetterAudit" | "mfaRecoveryCode" | "refreshSession" | "refreshTokenHistory"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1560,6 +1561,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.WebhookCircuitBreakerCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.WebhookCircuitBreakerCountAggregateOutputType> | number
+        }
+      }
+    }
+    ExportJob: {
+      payload: Prisma.$ExportJobPayload<ExtArgs>
+      fields: Prisma.ExportJobFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ExportJobFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ExportJobFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        findFirst: {
+          args: Prisma.ExportJobFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ExportJobFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        findMany: {
+          args: Prisma.ExportJobFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>[]
+        }
+        create: {
+          args: Prisma.ExportJobCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        createMany: {
+          args: Prisma.ExportJobCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ExportJobCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>[]
+        }
+        delete: {
+          args: Prisma.ExportJobDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        update: {
+          args: Prisma.ExportJobUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        deleteMany: {
+          args: Prisma.ExportJobDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ExportJobUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ExportJobUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>[]
+        }
+        upsert: {
+          args: Prisma.ExportJobUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ExportJobPayload>
+        }
+        aggregate: {
+          args: Prisma.ExportJobAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateExportJob>
+        }
+        groupBy: {
+          args: Prisma.ExportJobGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ExportJobGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ExportJobCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ExportJobCountAggregateOutputType> | number
         }
       }
     }
@@ -3450,6 +3525,30 @@ export const WebhookCircuitBreakerScalarFieldEnum = {
 export type WebhookCircuitBreakerScalarFieldEnum = (typeof WebhookCircuitBreakerScalarFieldEnum)[keyof typeof WebhookCircuitBreakerScalarFieldEnum]
 
 
+export const ExportJobScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  params: 'params',
+  status: 'status',
+  progress: 'progress',
+  rowsTotal: 'rowsTotal',
+  rowsProcessed: 'rowsProcessed',
+  fileName: 'fileName',
+  downloadName: 'downloadName',
+  contentType: 'contentType',
+  fileSize: 'fileSize',
+  error: 'error',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ExportJobScalarFieldEnum = (typeof ExportJobScalarFieldEnum)[keyof typeof ExportJobScalarFieldEnum]
+
+
 export const SorobanEventSnapshotScalarFieldEnum = {
   id: 'id',
   contractId: 'contractId',
@@ -4088,6 +4187,7 @@ export type GlobalOmitConfig = {
   webhook?: Prisma.WebhookOmit
   webhookLog?: Prisma.WebhookLogOmit
   webhookCircuitBreaker?: Prisma.WebhookCircuitBreakerOmit
+  exportJob?: Prisma.ExportJobOmit
   sorobanEventSnapshot?: Prisma.SorobanEventSnapshotOmit
   sorobanStateAudit?: Prisma.SorobanStateAuditOmit
   sorobanContractSubscription?: Prisma.SorobanContractSubscriptionOmit

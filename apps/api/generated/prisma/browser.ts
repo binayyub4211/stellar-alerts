@@ -93,6 +93,11 @@ export type WebhookLog = Prisma.WebhookLogModel
  */
 export type WebhookCircuitBreaker = Prisma.WebhookCircuitBreakerModel
 /**
+ * Model ExportJob
+ * 
+ */
+export type ExportJob = Prisma.ExportJobModel
+/**
  * Model SorobanEventSnapshot
  * 
  */

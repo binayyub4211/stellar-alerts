@@ -66,6 +66,7 @@ export const ModelName = {
   Webhook: 'Webhook',
   WebhookLog: 'WebhookLog',
   WebhookCircuitBreaker: 'WebhookCircuitBreaker',
+  ExportJob: 'ExportJob',
   SorobanEventSnapshot: 'SorobanEventSnapshot',
   SorobanStateAudit: 'SorobanStateAudit',
   SorobanContractSubscription: 'SorobanContractSubscription',
@@ -324,6 +325,30 @@ export const WebhookCircuitBreakerScalarFieldEnum = {
 } as const
 
 export type WebhookCircuitBreakerScalarFieldEnum = (typeof WebhookCircuitBreakerScalarFieldEnum)[keyof typeof WebhookCircuitBreakerScalarFieldEnum]
+
+
+export const ExportJobScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  params: 'params',
+  status: 'status',
+  progress: 'progress',
+  rowsTotal: 'rowsTotal',
+  rowsProcessed: 'rowsProcessed',
+  fileName: 'fileName',
+  downloadName: 'downloadName',
+  contentType: 'contentType',
+  fileSize: 'fileSize',
+  error: 'error',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ExportJobScalarFieldEnum = (typeof ExportJobScalarFieldEnum)[keyof typeof ExportJobScalarFieldEnum]
 
 
 export const SorobanEventSnapshotScalarFieldEnum = {
