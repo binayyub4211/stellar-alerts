@@ -5,12 +5,13 @@ import {
   suppressDeadLetterSchema,
 } from './dead-letters.schema';
 import { deadLettersService } from './dead-letters.service';
+import { ConflictError, NotFoundError, ValidationError, zodValidationError } from '../../lib/errors';
 
 export class DeadLettersController {
   async list(request: FastifyRequest, reply: FastifyReply) {
     const parsed = listDeadLettersQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid query', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid query');
     }
 
     const userId = (request as any).user.id;
@@ -21,7 +22,7 @@ export class DeadLettersController {
   async get(request: FastifyRequest, reply: FastifyReply) {
     const parsed = deadLetterIdSchema.safeParse(request.params);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid parameters', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid parameters');
     }
 
     const userId = (request as any).user.id;
@@ -32,7 +33,7 @@ export class DeadLettersController {
   async replay(request: FastifyRequest, reply: FastifyReply) {
     const parsed = deadLetterIdSchema.safeParse(request.params);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid parameters', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid parameters');
     }
 
     try {
@@ -41,10 +42,10 @@ export class DeadLettersController {
       return reply.send({ success: result.success, message: result.message });
     } catch (error: any) {
       if (error.message.startsWith('Dead letter')) {
-        return reply.status(404).send({ error: 'Not Found', message: error.message });
+        throw new NotFoundError(error.message);
       }
       if (error.message.includes('Suppressed')) {
-        return reply.status(409).send({ error: 'Conflict', message: error.message });
+        throw new ConflictError(error.message);
       }
       throw error;
     }
@@ -54,7 +55,7 @@ export class DeadLettersController {
     const params = deadLetterIdSchema.safeParse(request.params);
     const body = suppressDeadLetterSchema.safeParse(request.body ?? {});
     if (!params.success || !body.success) {
-      return reply.status(400).send({ error: 'Invalid request', details: params.success ? body.error?.format() : params.error.format() });
+      throw new ValidationError('Invalid request', params.success ? body.error?.format() : params.error.format());
     }
 
     try {
@@ -63,10 +64,10 @@ export class DeadLettersController {
       return reply.send({ success: true, deadLetter });
     } catch (error: any) {
       if (error.message.startsWith('Dead letter')) {
-        return reply.status(404).send({ error: 'Not Found', message: error.message });
+        throw new NotFoundError(error.message);
       }
       if (error.message.includes('already suppressed')) {
-        return reply.status(409).send({ error: 'Conflict', message: error.message });
+        throw new ConflictError(error.message);
       }
       throw error;
     }

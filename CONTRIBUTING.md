@@ -73,17 +73,46 @@ npm run db:studio
 
 ### 5. Running Tests & Typechecks
 
-Run the automated Vitest test suite and TypeScript typechecks before opening a PR:
+CI runs one supported Node version (pinned in [`.nvmrc`](.nvmrc), Node 20) and
+typechecks/builds **every** workspace — `apps/api`, `apps/web`,
+`packages/shared`, and `packages/cli`. Run the same contract before opening a PR:
 
 ```bash
-npm run test:api
-npx tsc -p apps/api/tsconfig.json --noEmit
-npx tsc -p apps/web/tsconfig.json --noEmit
+npm run typecheck   # turbo typecheck across all workspaces
+npm run build       # turbo build across all workspaces
+npm run test:api    # API Vitest suite
+npm run test --workspace=web
+npm run test --workspace=stellar-alerts-cli
 ```
+
+To scope a command to a single workspace, use its path:
+`npm run typecheck --workspace=apps/web`. See
+[`docs/ci.md`](docs/ci.md) for how the CI matrix is wired.
 
 ---
 
-### 6. Running the Development Application
+### 6. OpenAPI Schema Compatibility
+
+PRs are automatically checked for **breaking OpenAPI schema changes** against
+`main` (removed paths/schemas/properties, narrowed responses, newly required
+fields, changed types, removed enum values). The
+`OpenAPI Breaking-Change Detection` CI job blocks the merge when one is
+detected.
+
+Run the same check locally before pushing:
+
+```bash
+npm run openapi:check:breaking
+```
+
+If your change intentionally breaks the API contract, bump the OpenAPI
+`info.version` in `apps/api/src/openapi.config.ts`, run `npm run
+generate:types`, commit the regenerated files, and document the migration —
+see [docs/openapi-breaking-changes.md](docs/openapi-breaking-changes.md).
+
+---
+
+### 7. Running the Development Application
 
 Launch the full monorepo stack using Turborepo:
 

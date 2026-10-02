@@ -179,6 +179,249 @@
           }
         },
         "additionalProperties": false
+      },
+      "SandboxReplayIdParams": {
+        "type": "object",
+        "properties": {
+          "replayId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "replayId"
+        ],
+        "additionalProperties": false
+      },
+      "SandboxReplayInput": {
+        "type": "object",
+        "properties": {
+          "mockResponse": {
+            "default": {
+              "status": 200,
+              "headers": {},
+              "body": "",
+              "delayMs": 0
+            },
+            "type": "object",
+            "properties": {
+              "status": {
+                "default": 200,
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 599
+              },
+              "headers": {
+                "default": {},
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "body": {
+                "default": "",
+                "type": "string",
+                "maxLength": 65536
+              },
+              "delayMs": {
+                "default": 0,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5000
+              }
+            },
+            "required": [
+              "status",
+              "headers",
+              "body",
+              "delayMs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "mockResponse"
+        ],
+        "additionalProperties": false
+      },
+      "ListSandboxReplaysQuery": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed"
+            ]
+          },
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "pageSize": {
+            "default": 20,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Stable, machine-readable error code (e.g. VALIDATION_ERROR, NOT_FOUND, CONFLICT)."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable, client-safe message. Never contains internal/sensitive detail."
+              },
+              "details": {
+                "description": "Optional structured detail, e.g. field-level validation errors."
+              },
+              "requestId": {
+                "type": "string",
+                "description": "Correlation id — also returned as the x-request-id response header."
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "CreateExportInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ledger_csv",
+              "ledger_pdf",
+              "tax_csv"
+            ]
+          },
+          "walletId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "periodStart": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              }
+            ]
+          },
+          "periodEnd": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              }
+            ]
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "cointracker",
+              "koinly",
+              "irs8949"
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "ExportIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "ListExportsQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "pageSize": {
+            "default": 20,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "page",
+          "pageSize"
+        ],
+        "additionalProperties": false
+      },
+      "DownloadExportQuery": {
+        "type": "object",
+        "properties": {
+          "expires": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "sig": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "expires",
+          "sig"
+        ],
+        "additionalProperties": false
       }
     }
   },
@@ -203,6 +446,14 @@
     {
       "name": "dead-letters",
       "description": "Inspection, replay and suppression of failed notification deliveries"
+    },
+    {
+      "name": "webhook-sandbox",
+      "description": "Sandbox replay of dead letters against a mock webhook receiver with response inspection"
+    },
+    {
+      "name": "exports",
+      "description": "Asynchronous CSV/PDF export jobs with progress and signed downloads"
     }
   ]
 }

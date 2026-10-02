@@ -31,6 +31,10 @@ Stellar Alerts monitors registered Stellar public wallets in real time for incom
 - 📊 **Modular React Dashboard**: Monitored wallets, summary statistics, and real-time payment history powered by Next.js and Tailwind CSS, organized into feature routes (`/dashboard`, `/inspectors`, `/settings`, `/onboarding`, `/docs`).
 - 🧙 **Resumable Onboarding Wizard**: A three-step freelancer setup flow (wallet connection → Telegram linking → notification preferences) with a test-ping check before activation; progress persists to `localStorage` so a refresh resumes exactly where the user left off.
 - 🧪 **Automated Vitest Test Suite**: Unit testing framework with 100% passing test coverage (`npm run test:api`).
+- 🔄 **GraphQL Subscriptions**: Real-time event streaming via GraphQL with Apollo Server and Redis Pub/Sub for filtered transaction and contract events over WebSockets.
+- 📡 **gRPC Streaming Interface**: Enterprise-grade streaming server with Proto3 definitions for ledger events, wallet alert subscriptions, and low-latency bidirectional notification feeds.
+- 🖥️ **Interactive TUI Dashboard**: React Ink terminal interface for real-time monitoring of ingested transactions, queue depths, delivery latency, and worker status.
+- 🤖 **Headless Daemon Mode**: Background alert processing with automated service generation for systemd (Linux) and launchd (macOS).
 
 ---
 
@@ -47,6 +51,8 @@ For complete technical specifications, database schemas, and data flow details, 
 ---
 
 ## 🚀 Quick Start for Reviewers & Developers
+
+> **Note:** For a comprehensive setup guide including environment variables, wallet connection, and the freelancer alert quick start flow, please refer to **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
 
 ### 1. Installation & Monorepo Setup
 ```bash
@@ -76,6 +82,8 @@ Or launch components individually:
 npm run dev:api     # Fastify REST API on http://localhost:3001
 npm run dev:worker  # Stellar Horizon & Soroban Ingestion Worker
 npm run dev:web     # Next.js Dashboard on http://localhost:3000
+npm run cli:tui     # Interactive terminal dashboard
+npm run daemon:start # Start headless daemon mode
 ```
 
 ### 5. Test Live Stellar Payment Ingestion
@@ -105,6 +113,7 @@ Custom endpoints must be HTTPS and their hostnames must be listed in `STELLAR_CU
 ## 🏆 Grant Qualification & Documentation
 
 - **Drips Wave Audit & Readiness Report**: See **[drips_wave_readiness_audit.md](file:///C:/Users/user/.gemini/antigravity-ide/brain/12528373-9966-4327-97c9-8c7388be13f6/drips_wave_readiness_audit.md)** for full reviewer scoring & roadmap.
+- **Local Setup & Freelancer Quick Start**: See **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
 - **Grant Submission Qualification Matrix**: See **[SUBMISSION.md](SUBMISSION.md)**.
 - **System Design & API Specs**: See **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
@@ -118,6 +127,18 @@ Custom endpoints must be HTTPS and their hostnames must be listed in `STELLAR_CU
 Join our official Telegram community to ask questions, chat with maintainers, discuss Drips Wave sprint tasks, and stay updated on new releases:
 
 👉 **[Join Stellar Alerts on Telegram](https://t.me/+uElHrnWMb180MWM0)**
+
+---
+
+## 🤖 Automated Dependency Management
+
+Dependabot is configured to automatically update dependencies weekly with grouped PRs to reduce notification noise:
+
+- **JavaScript/npm workspace dependencies**: All workspace packages (`apps/*`, `packages/*`) are monitored for updates
+- **Docker images**: Base images in `docker-compose.yml` (postgres, redis, toxiproxy) are monitored 
+- **GitHub Actions**: Workflow dependencies (actions/checkout, setup-node, etc.) are monitored
+
+All updates run weekly on Mondays and are grouped by ecosystem to minimize PR volume. The configuration can be validated with `npm run validate:dependabot`.
 
 ---
 

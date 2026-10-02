@@ -193,6 +193,14 @@ function createClient(): Redis {
 export const redis = createClient();
 
 /**
+ * Returns the shared Redis singleton client instance.
+ * Use this when a module needs to import the client by a named function.
+ */
+export function getRedisClient(): Redis {
+  return redis;
+}
+
+/**
  * Gets current Redis lifecycle status.
  */
 export function getRedisStatus(): RedisLifecycleStatus {

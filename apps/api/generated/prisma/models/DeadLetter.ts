@@ -279,6 +279,7 @@ export type DeadLetterWhereInput = {
   payment?: Prisma.XOR<Prisma.PaymentNullableScalarRelationFilter, Prisma.PaymentWhereInput> | null
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   auditLogs?: Prisma.DeadLetterAuditListRelationFilter
+  sandboxReplays?: Prisma.WebhookSandboxReplayListRelationFilter
 }
 
 export type DeadLetterOrderByWithRelationInput = {
@@ -298,6 +299,7 @@ export type DeadLetterOrderByWithRelationInput = {
   payment?: Prisma.PaymentOrderByWithRelationInput
   user?: Prisma.UserOrderByWithRelationInput
   auditLogs?: Prisma.DeadLetterAuditOrderByRelationAggregateInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayOrderByRelationAggregateInput
 }
 
 export type DeadLetterWhereUniqueInput = Prisma.AtLeast<{
@@ -320,6 +322,7 @@ export type DeadLetterWhereUniqueInput = Prisma.AtLeast<{
   payment?: Prisma.XOR<Prisma.PaymentNullableScalarRelationFilter, Prisma.PaymentWhereInput> | null
   user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   auditLogs?: Prisma.DeadLetterAuditListRelationFilter
+  sandboxReplays?: Prisma.WebhookSandboxReplayListRelationFilter
 }, "id">
 
 export type DeadLetterOrderByWithAggregationInput = {
@@ -377,6 +380,7 @@ export type DeadLetterCreateInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutDeadLettersInput
   user?: Prisma.UserCreateNestedOneWithoutDeadLettersInput
   auditLogs?: Prisma.DeadLetterAuditCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterUncheckedCreateInput = {
@@ -394,6 +398,7 @@ export type DeadLetterUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterUpdateInput = {
@@ -411,6 +416,7 @@ export type DeadLetterUpdateInput = {
   payment?: Prisma.PaymentUpdateOneWithoutDeadLettersNestedInput
   user?: Prisma.UserUpdateOneWithoutDeadLettersNestedInput
   auditLogs?: Prisma.DeadLetterAuditUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateInput = {
@@ -428,6 +434,7 @@ export type DeadLetterUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterCreateManyInput = {
@@ -629,6 +636,20 @@ export type DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput = {
   deleteMany?: Prisma.DeadLetterScalarWhereInput | Prisma.DeadLetterScalarWhereInput[]
 }
 
+export type DeadLetterCreateNestedOneWithoutSandboxReplaysInput = {
+  create?: Prisma.XOR<Prisma.DeadLetterCreateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedCreateWithoutSandboxReplaysInput>
+  connectOrCreate?: Prisma.DeadLetterCreateOrConnectWithoutSandboxReplaysInput
+  connect?: Prisma.DeadLetterWhereUniqueInput
+}
+
+export type DeadLetterUpdateOneRequiredWithoutSandboxReplaysNestedInput = {
+  create?: Prisma.XOR<Prisma.DeadLetterCreateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedCreateWithoutSandboxReplaysInput>
+  connectOrCreate?: Prisma.DeadLetterCreateOrConnectWithoutSandboxReplaysInput
+  upsert?: Prisma.DeadLetterUpsertWithoutSandboxReplaysInput
+  connect?: Prisma.DeadLetterWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DeadLetterUpdateToOneWithWhereWithoutSandboxReplaysInput, Prisma.DeadLetterUpdateWithoutSandboxReplaysInput>, Prisma.DeadLetterUncheckedUpdateWithoutSandboxReplaysInput>
+}
+
 export type DeadLetterCreateNestedOneWithoutAuditLogsInput = {
   create?: Prisma.XOR<Prisma.DeadLetterCreateWithoutAuditLogsInput, Prisma.DeadLetterUncheckedCreateWithoutAuditLogsInput>
   connectOrCreate?: Prisma.DeadLetterCreateOrConnectWithoutAuditLogsInput
@@ -657,6 +678,7 @@ export type DeadLetterCreateWithoutUserInput = {
   updatedAt?: Date | string
   payment?: Prisma.PaymentCreateNestedOneWithoutDeadLettersInput
   auditLogs?: Prisma.DeadLetterAuditCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterUncheckedCreateWithoutUserInput = {
@@ -673,6 +695,7 @@ export type DeadLetterUncheckedCreateWithoutUserInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterCreateOrConnectWithoutUserInput = {
@@ -734,6 +757,7 @@ export type DeadLetterCreateWithoutPaymentInput = {
   updatedAt?: Date | string
   user?: Prisma.UserCreateNestedOneWithoutDeadLettersInput
   auditLogs?: Prisma.DeadLetterAuditCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterUncheckedCreateWithoutPaymentInput = {
@@ -750,6 +774,7 @@ export type DeadLetterUncheckedCreateWithoutPaymentInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedCreateNestedManyWithoutDeadLetterInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterCreateOrConnectWithoutPaymentInput = {
@@ -778,6 +803,90 @@ export type DeadLetterUpdateManyWithWhereWithoutPaymentInput = {
   data: Prisma.XOR<Prisma.DeadLetterUpdateManyMutationInput, Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentInput>
 }
 
+export type DeadLetterCreateWithoutSandboxReplaysInput = {
+  id?: string
+  deliveryKey?: string | null
+  channel: string
+  destination?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  error: string
+  status?: string
+  retryCount?: number
+  failedAt?: Date | string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  payment?: Prisma.PaymentCreateNestedOneWithoutDeadLettersInput
+  user?: Prisma.UserCreateNestedOneWithoutDeadLettersInput
+  auditLogs?: Prisma.DeadLetterAuditCreateNestedManyWithoutDeadLetterInput
+}
+
+export type DeadLetterUncheckedCreateWithoutSandboxReplaysInput = {
+  id?: string
+  deliveryKey?: string | null
+  paymentId?: string | null
+  userId?: string | null
+  channel: string
+  destination?: string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  error: string
+  status?: string
+  retryCount?: number
+  failedAt?: Date | string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  auditLogs?: Prisma.DeadLetterAuditUncheckedCreateNestedManyWithoutDeadLetterInput
+}
+
+export type DeadLetterCreateOrConnectWithoutSandboxReplaysInput = {
+  where: Prisma.DeadLetterWhereUniqueInput
+  create: Prisma.XOR<Prisma.DeadLetterCreateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedCreateWithoutSandboxReplaysInput>
+}
+
+export type DeadLetterUpsertWithoutSandboxReplaysInput = {
+  update: Prisma.XOR<Prisma.DeadLetterUpdateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedUpdateWithoutSandboxReplaysInput>
+  create: Prisma.XOR<Prisma.DeadLetterCreateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedCreateWithoutSandboxReplaysInput>
+  where?: Prisma.DeadLetterWhereInput
+}
+
+export type DeadLetterUpdateToOneWithWhereWithoutSandboxReplaysInput = {
+  where?: Prisma.DeadLetterWhereInput
+  data: Prisma.XOR<Prisma.DeadLetterUpdateWithoutSandboxReplaysInput, Prisma.DeadLetterUncheckedUpdateWithoutSandboxReplaysInput>
+}
+
+export type DeadLetterUpdateWithoutSandboxReplaysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  deliveryKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  channel?: Prisma.StringFieldUpdateOperationsInput | string
+  destination?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  error?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  failedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  payment?: Prisma.PaymentUpdateOneWithoutDeadLettersNestedInput
+  user?: Prisma.UserUpdateOneWithoutDeadLettersNestedInput
+  auditLogs?: Prisma.DeadLetterAuditUpdateManyWithoutDeadLetterNestedInput
+}
+
+export type DeadLetterUncheckedUpdateWithoutSandboxReplaysInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  deliveryKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  channel?: Prisma.StringFieldUpdateOperationsInput | string
+  destination?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  error?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  retryCount?: Prisma.IntFieldUpdateOperationsInput | number
+  failedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auditLogs?: Prisma.DeadLetterAuditUncheckedUpdateManyWithoutDeadLetterNestedInput
+}
+
 export type DeadLetterCreateWithoutAuditLogsInput = {
   id?: string
   deliveryKey?: string | null
@@ -792,6 +901,7 @@ export type DeadLetterCreateWithoutAuditLogsInput = {
   updatedAt?: Date | string
   payment?: Prisma.PaymentCreateNestedOneWithoutDeadLettersInput
   user?: Prisma.UserCreateNestedOneWithoutDeadLettersInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterUncheckedCreateWithoutAuditLogsInput = {
@@ -808,6 +918,7 @@ export type DeadLetterUncheckedCreateWithoutAuditLogsInput = {
   failedAt?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutDeadLetterInput
 }
 
 export type DeadLetterCreateOrConnectWithoutAuditLogsInput = {
@@ -840,6 +951,7 @@ export type DeadLetterUpdateWithoutAuditLogsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payment?: Prisma.PaymentUpdateOneWithoutDeadLettersNestedInput
   user?: Prisma.UserUpdateOneWithoutDeadLettersNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateWithoutAuditLogsInput = {
@@ -856,6 +968,7 @@ export type DeadLetterUncheckedUpdateWithoutAuditLogsInput = {
   failedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterCreateManyUserInput = {
@@ -887,6 +1000,7 @@ export type DeadLetterUpdateWithoutUserInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payment?: Prisma.PaymentUpdateOneWithoutDeadLettersNestedInput
   auditLogs?: Prisma.DeadLetterAuditUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateWithoutUserInput = {
@@ -903,6 +1017,7 @@ export type DeadLetterUncheckedUpdateWithoutUserInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateManyWithoutUserInput = {
@@ -949,6 +1064,7 @@ export type DeadLetterUpdateWithoutPaymentInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneWithoutDeadLettersNestedInput
   auditLogs?: Prisma.DeadLetterAuditUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateWithoutPaymentInput = {
@@ -965,6 +1081,7 @@ export type DeadLetterUncheckedUpdateWithoutPaymentInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   auditLogs?: Prisma.DeadLetterAuditUncheckedUpdateManyWithoutDeadLetterNestedInput
+  sandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutDeadLetterNestedInput
 }
 
 export type DeadLetterUncheckedUpdateManyWithoutPaymentInput = {
@@ -989,10 +1106,12 @@ export type DeadLetterUncheckedUpdateManyWithoutPaymentInput = {
 
 export type DeadLetterCountOutputType = {
   auditLogs: number
+  sandboxReplays: number
 }
 
 export type DeadLetterCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   auditLogs?: boolean | DeadLetterCountOutputTypeCountAuditLogsArgs
+  sandboxReplays?: boolean | DeadLetterCountOutputTypeCountSandboxReplaysArgs
 }
 
 /**
@@ -1010,6 +1129,13 @@ export type DeadLetterCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.E
  */
 export type DeadLetterCountOutputTypeCountAuditLogsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.DeadLetterAuditWhereInput
+}
+
+/**
+ * DeadLetterCountOutputType without action
+ */
+export type DeadLetterCountOutputTypeCountSandboxReplaysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WebhookSandboxReplayWhereInput
 }
 
 
@@ -1030,6 +1156,7 @@ export type DeadLetterSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   payment?: boolean | Prisma.DeadLetter$paymentArgs<ExtArgs>
   user?: boolean | Prisma.DeadLetter$userArgs<ExtArgs>
   auditLogs?: boolean | Prisma.DeadLetter$auditLogsArgs<ExtArgs>
+  sandboxReplays?: boolean | Prisma.DeadLetter$sandboxReplaysArgs<ExtArgs>
   _count?: boolean | Prisma.DeadLetterCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["deadLetter"]>
 
@@ -1090,6 +1217,7 @@ export type DeadLetterInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   payment?: boolean | Prisma.DeadLetter$paymentArgs<ExtArgs>
   user?: boolean | Prisma.DeadLetter$userArgs<ExtArgs>
   auditLogs?: boolean | Prisma.DeadLetter$auditLogsArgs<ExtArgs>
+  sandboxReplays?: boolean | Prisma.DeadLetter$sandboxReplaysArgs<ExtArgs>
   _count?: boolean | Prisma.DeadLetterCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DeadLetterIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1107,6 +1235,7 @@ export type $DeadLetterPayload<ExtArgs extends runtime.Types.Extensions.Internal
     payment: Prisma.$PaymentPayload<ExtArgs> | null
     user: Prisma.$UserPayload<ExtArgs> | null
     auditLogs: Prisma.$DeadLetterAuditPayload<ExtArgs>[]
+    sandboxReplays: Prisma.$WebhookSandboxReplayPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1519,6 +1648,7 @@ export interface Prisma__DeadLetterClient<T, Null = never, ExtArgs extends runti
   payment<T extends Prisma.DeadLetter$paymentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DeadLetter$paymentArgs<ExtArgs>>): Prisma.Prisma__PaymentClient<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   user<T extends Prisma.DeadLetter$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DeadLetter$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   auditLogs<T extends Prisma.DeadLetter$auditLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DeadLetter$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeadLetterAuditPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  sandboxReplays<T extends Prisma.DeadLetter$sandboxReplaysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.DeadLetter$sandboxReplaysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookSandboxReplayPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2021,6 +2151,30 @@ export type DeadLetter$auditLogsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.DeadLetterAuditScalarFieldEnum | Prisma.DeadLetterAuditScalarFieldEnum[]
+}
+
+/**
+ * DeadLetter.sandboxReplays
+ */
+export type DeadLetter$sandboxReplaysArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WebhookSandboxReplay
+   */
+  select?: Prisma.WebhookSandboxReplaySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WebhookSandboxReplay
+   */
+  omit?: Prisma.WebhookSandboxReplayOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WebhookSandboxReplayInclude<ExtArgs> | null
+  where?: Prisma.WebhookSandboxReplayWhereInput
+  orderBy?: Prisma.WebhookSandboxReplayOrderByWithRelationInput | Prisma.WebhookSandboxReplayOrderByWithRelationInput[]
+  cursor?: Prisma.WebhookSandboxReplayWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WebhookSandboxReplayScalarFieldEnum | Prisma.WebhookSandboxReplayScalarFieldEnum[]
 }
 
 /**
