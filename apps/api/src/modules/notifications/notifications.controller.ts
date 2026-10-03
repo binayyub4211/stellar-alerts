@@ -19,7 +19,7 @@ export class NotificationsController {
       throw new AuthenticationError('User not authenticated');
     }
 
-    const body = request.body as any;
+    const body = (request.body as any) || {};
     const { mfaToken, ...preferences } = body;
 
     try {
@@ -79,7 +79,7 @@ export class NotificationsController {
       throw new AuthenticationError('User not authenticated');
     }
 
-    const body = request.body as any;
+    const body = (request.body as any) || {};
     const { mfaToken, ...preferences } = body;
 
     await notificationsService.updatePreferences(
@@ -184,7 +184,7 @@ export class NotificationsController {
     const channel = body?.channel;
 
     if (channel !== 'telegram' && channel !== 'push') {
-      throw new ValidationError('channel must be "telegram" or "push"');
+      throw new ValidationError('channel must be "telegram"', undefined, 'INVALID_CHANNEL');
     }
 
     try {

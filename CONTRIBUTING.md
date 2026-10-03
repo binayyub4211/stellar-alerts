@@ -91,7 +91,28 @@ To scope a command to a single workspace, use its path:
 
 ---
 
-### 6. Running the Development Application
+### 6. OpenAPI Schema Compatibility
+
+PRs are automatically checked for **breaking OpenAPI schema changes** against
+`main` (removed paths/schemas/properties, narrowed responses, newly required
+fields, changed types, removed enum values). The
+`OpenAPI Breaking-Change Detection` CI job blocks the merge when one is
+detected.
+
+Run the same check locally before pushing:
+
+```bash
+npm run openapi:check:breaking
+```
+
+If your change intentionally breaks the API contract, bump the OpenAPI
+`info.version` in `apps/api/src/openapi.config.ts`, run `npm run
+generate:types`, commit the regenerated files, and document the migration —
+see [docs/openapi-breaking-changes.md](docs/openapi-breaking-changes.md).
+
+---
+
+### 7. Running the Development Application
 
 Launch the full monorepo stack using Turborepo:
 
@@ -122,7 +143,23 @@ Or launch components individually from the project root:
    - `fix(worker): handle network timeout on horizon query`
    - `docs: update setup guide in CONTRIBUTING.md`
 
-3. **Testing with Stellar Testnet**:
+3. **Architecture Decisions (ADRs)**:
+   Before changing ingestion, queueing, or notification delivery, read the
+   relevant ADR. These record the decision as implemented, the tradeoffs
+   accepted, and known gaps between design and code — each claim is cited to a
+   `file:line` you can verify.
+
+   | Area | ADR |
+   |---|---|
+   | Ingestion | [0001 — Horizon paging-token cursors with bounded backfill](docs/adr/0001-horizon-cursor-ingestion.md) |
+   | Queueing | [0002 — BullMQ on Redis for the payment-alert queue and DLQ](docs/adr/0002-bullmq-payment-alert-queue.md) |
+   | Notification delivery | [0003 — Content-addressed delivery keys and idempotency](docs/adr/0003-notification-delivery-idempotency.md) |
+
+   Index and format: [`docs/adr/README.md`](docs/adr/README.md). If your change
+   supersedes a decision, add a new ADR and mark the old one Superseded rather
+   than editing its rationale.
+
+4. **Testing with Stellar Testnet**:
    - Always test blockchain operations against **Stellar Testnet**.
    - Fund test public keys using [Stellar Friendbot](https://friendbot.stellar.org).
    - Never use real Stellar mainnet secret keys or funds during development!

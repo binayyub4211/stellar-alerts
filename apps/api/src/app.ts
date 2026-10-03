@@ -19,9 +19,11 @@ import { sorobanStateRoutes } from './modules/soroban-state/soroban-state.routes
 import { notificationsRoutes } from './modules/notifications/notifications.routes';
 import { alertRulesRoutes } from './modules/alert-rules/alert-rules.routes';
 import { deadLettersRoutes } from './modules/dead-letters/dead-letters.routes';
+import { discordInteractionsRoutes } from './modules/discord-interactions';
 import { graphqlRoutes } from './modules/graphql/graphql.routes';
 import { exportsRoutes } from './modules/exports/exports.routes';
 import { openApiOptions } from './openapi.config';
+import { loggerOptions } from './lib/logger';
 
 import { checkRedisReadiness, getRedisStatus } from './lib/redis';
 import { dbFailover } from './lib/db-failover';
@@ -32,7 +34,8 @@ export { openApiComponentSchemas, openApiOptions } from './openapi.config';
 
 export const buildApp = async () => {
   const app = Fastify({
-    logger: true,
+    logger: loggerOptions,
+    requestIdLogLabel: 'requestId',
     pluginTimeout: 30000,
     /**
      * Correlation ID strategy:
@@ -40,7 +43,7 @@ export const buildApp = async () => {
      *  2. Otherwise generate a fresh UUID v4 via the Node built-in crypto module.
      *
      * Fastify automatically binds the resolved ID to `request.id` and injects
-     * it into every Pino log line produced via `request.log.*` as the `reqId`
+     * it into every Pino log line produced via `request.log.*` as the `requestId`
      * field, giving full per-request traceability at zero extra cost.
      */
     requestIdHeader: 'x-request-id',
@@ -102,6 +105,24 @@ export const buildApp = async () => {
           code: 'VALIDATION_ERROR',
           message: 'Request validation failed',
           details: (error as any).validation,
+          requestId: request.requestId || request.id,
+        },
+      });
+    }
+
+    // Malformed JSON bodies (and other 4xx HTTP-level parse errors) thrown by
+    // Fastify itself before any handler runs — the client sent bad input, so a
+    // 500 would be misleading. The generic message stays safe for clients.
+    const err = error as any;
+    if (err.statusCode !== undefined && err.statusCode >= 400 && err.statusCode < 500) {
+      request.log.warn({ err: error }, 'Bad request rejected');
+      return reply.status(err.statusCode).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: err.code === 'FST_ERR_CTP_INVALID_JSON_PARSE_ERROR'
+            ? 'Malformed JSON in request body'
+            : 'Bad request',
+          ...(Array.isArray(err.errors) ? { details: err.errors } : {}),
           requestId: request.requestId || request.id,
         },
       });
@@ -171,8 +192,9 @@ export const buildApp = async () => {
   app.register(notificationsRoutes);
   app.register(alertRulesRoutes);
   app.register(deadLettersRoutes);
-  await app.register(graphqlRoutes);
+await app.register(graphqlRoutes);
   app.register(exportsRoutes);
+  app.register(discordInteractionsRoutes);
 
   return app;
 };

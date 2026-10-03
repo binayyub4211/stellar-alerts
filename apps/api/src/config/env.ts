@@ -10,13 +10,20 @@ const envSchema = z.object({
   REDIS_SENTINEL_MASTER_NAME: z.string().optional().default("mymaster"),
   REDIS_SENTINEL_PASSWORD: z.string().optional(),
   PORT: z.string().optional().default("3001"),
+  // Comma-separated browser origins allowed to send cookie-authenticated mutations.
+  CSRF_ALLOWED_ORIGINS: z.string().optional().default("http://localhost:3000"),
   MASTER_ENCRYPTION_KEY: z.string().min(32).describe('Master key for encrypting webhook secrets (AES-256-GCM)'),
   MASTER_ENCRYPTION_KEY_VERSION: z.string().optional().default("1"),
   MASTER_ENCRYPTION_OLD_KEYS: z.string().optional().default("{}"),
+  // Discord application public key used to verify interaction webhooks
+  // (acknowledge / snooze / re-route buttons on alert messages). Unset disables
+  // the /integrations/discord/interactions route.
+  DISCORD_PUBLIC_KEY: z.string().optional(),
   // Requests/minute allowed per client before @fastify/rate-limit responds 429.
   // Overridable so load-test runs (k6, etc.) can measure real server capacity
   // instead of hitting the rate limiter almost immediately.
   RATE_LIMIT_MAX: z.coerce.number().int().positive().optional().default(100),
+  WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().max(20).optional().default(5),
   SOROBAN_RENT_WORKER_ENABLED: z.string().optional().default("true"),
   SOROBAN_RENT_WORKER_INTERVAL_MS: z.string().optional().default("60000"),
   SOROBAN_RENT_WORKER_SECRET: z.string().optional(),
@@ -46,6 +53,12 @@ const envSchema = z.object({
   MULTISIG_INACTIVITY_INTERVAL_MS: z.string().optional().default("3600000"),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional().default("http://localhost:4318/v1/traces"),
   OTEL_SERVICE_NAME: z.string().optional().default("stellar-alerts-api"),
+  // Workers register their own tracer so Jaeger can attribute webhook dispatch
+  // spans to the dispatcher rather than to the API service.
+  OTEL_WORKER_SERVICE_NAME: z.string().optional().default("stellar-alerts-webhook-dispatcher"),
+  // Opt-in Prometheus scrape port for worker processes. Unset by default, in
+  // which case no listener is opened.
+  WORKER_METRICS_PORT: z.coerce.number().int().positive().optional(),
   // Provider timeouts & deadlines (#303)
   EXTERNAL_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional().default(10000),
   HORIZON_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional().default(10000),
@@ -177,6 +190,7 @@ const parseEnv = (): Env => {
       MASTER_ENCRYPTION_KEY_VERSION: "1",
       MASTER_ENCRYPTION_OLD_KEYS: "{}",
       RATE_LIMIT_MAX: 100,
+      WORKER_MAX_ATTEMPTS: 5,
       SOROBAN_RENT_WORKER_ENABLED: "true",
       SOROBAN_RENT_WORKER_INTERVAL_MS: "60000",
       SOROBAN_RENT_WORKER_SECRET: undefined,
@@ -208,7 +222,9 @@ const parseEnv = (): Env => {
     REDIS_SENTINEL_MASTER_NAME: "mymaster",
     REDIS_SENTINEL_PASSWORD: undefined,
     PORT: "3001",
+    CSRF_ALLOWED_ORIGINS: "http://localhost:3000",
     RATE_LIMIT_MAX: 100,
+    WORKER_MAX_ATTEMPTS: 5,
     SOROBAN_RENT_WORKER_ENABLED: "true",
     SOROBAN_RENT_WORKER_INTERVAL_MS: "60000",
     SOROBAN_RENT_WORKER_SECRET: undefined,

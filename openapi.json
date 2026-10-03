@@ -118,7 +118,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^c[a-z0-9]{24,}$"
           }
         },
         "required": [
@@ -214,9 +214,7 @@
               "headers": {
                 "default": {},
                 "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
+                "properties": {},
                 "additionalProperties": {
                   "type": "string"
                 }
@@ -410,7 +408,7 @@
         "properties": {
           "expires": {
             "type": "integer",
-            "exclusiveMinimum": 0,
+            "minimum": 1,
             "maximum": 9007199254740991
           },
           "sig": {

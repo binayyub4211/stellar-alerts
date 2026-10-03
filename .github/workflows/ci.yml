@@ -34,10 +34,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -94,10 +94,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -123,12 +123,22 @@ jobs:
           DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
 
       - name: Run API Unit Tests
-        run: npm run test:api
+        run: npm run test:unit --workspace=api
         env:
           DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
           REDIS_URL: "redis://localhost:6379"
           JWT_SECRET: "ci-unit-test-secret-key-min-32-chars!!"
           MASTER_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          NODE_ENV: "test"
+
+      - name: Run API Integration Tests
+        run: npm run test:integration --workspace=api
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/stellar_alerts?schema=public"
+          REDIS_URL: "redis://localhost:6379"
+          JWT_SECRET: "ci-integration-test-secret-key-min-32-chars!!"
+          MASTER_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          TELEGRAM_BOT_TOKEN: "test-telegram-token"
           NODE_ENV: "test"
 
       - name: Run Web Lint
@@ -168,10 +178,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -196,10 +206,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'

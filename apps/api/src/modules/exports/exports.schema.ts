@@ -38,6 +38,10 @@ export const listExportsQuerySchema = z.object({
 export type ListExportsQuery = z.infer<typeof listExportsQuerySchema>;
 
 export const downloadExportQuerySchema = z.object({
-  expires: z.coerce.number().int().positive(),
+  // .min(1) instead of .positive() — both require expires > 0, but .positive()
+  // emits `exclusiveMinimum: 0` (JSON Schema 2020-12 integer form) which
+  // openapi-diff rejects as invalid OpenAPI 3.0. .min(1) emits `minimum: 1`
+  // which is valid in all OpenAPI 3.x versions.
+  expires: z.coerce.number().int().min(1),
   sig: z.string().min(1).max(128),
 });
