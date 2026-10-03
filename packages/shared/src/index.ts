@@ -3,6 +3,7 @@
 // hand-written DTOs below (`components["schemas"]["RequestLinkInput"]`, etc).
 export type { components as ApiComponents, paths as ApiPaths } from './generated/api-types';
 export * from './config/index';
+export * from './merkle';
 
 export interface UserDTO {
   id: string;

@@ -1,5 +1,11 @@
 # Stellar Alerts ⚡
 
+## Worker failure quarantine
+
+Payment alert jobs use a bounded retry policy. Transient infrastructure and provider failures are retried up to `WORKER_MAX_ATTEMPTS` (default `5`, maximum `20`) with exponential backoff. Invalid or otherwise permanent jobs are quarantined immediately and are not retried.
+
+Quarantined jobs are copied to the `payment-alerts-dlq` queue and persisted as `DeadLetter` records with the job ID, failure class, failure reason, attempts made, and configured attempt cap. The dead-letter API exposes this metadata for operator inspection and preserves the existing replay and suppression workflow. The default cap is backward-compatible with the previous five-attempt behavior; set `WORKER_MAX_ATTEMPTS` during rollout if a different cap is required.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-5.10-green.svg)](https://fastify.dev/)
@@ -31,6 +37,10 @@ Stellar Alerts monitors registered Stellar public wallets in real time for incom
 - 📊 **Modular React Dashboard**: Monitored wallets, summary statistics, and real-time payment history powered by Next.js and Tailwind CSS, organized into feature routes (`/dashboard`, `/inspectors`, `/settings`, `/onboarding`, `/docs`).
 - 🧙 **Resumable Onboarding Wizard**: A three-step freelancer setup flow (wallet connection → Telegram linking → notification preferences) with a test-ping check before activation; progress persists to `localStorage` so a refresh resumes exactly where the user left off.
 - 🧪 **Automated Vitest Test Suite**: Unit testing framework with 100% passing test coverage (`npm run test:api`).
+- 🔄 **GraphQL Subscriptions**: Real-time event streaming via GraphQL with Apollo Server and Redis Pub/Sub for filtered transaction and contract events over WebSockets.
+- 📡 **gRPC Streaming Interface**: Enterprise-grade streaming server with Proto3 definitions for ledger events, wallet alert subscriptions, and low-latency bidirectional notification feeds.
+- 🖥️ **Interactive TUI Dashboard**: React Ink terminal interface for real-time monitoring of ingested transactions, queue depths, delivery latency, and worker status.
+- 🤖 **Headless Daemon Mode**: Background alert processing with automated service generation for systemd (Linux) and launchd (macOS).
 
 ---
 
@@ -47,6 +57,8 @@ For complete technical specifications, database schemas, and data flow details, 
 ---
 
 ## 🚀 Quick Start for Reviewers & Developers
+
+> **Note:** For a comprehensive setup guide including environment variables, wallet connection, and the freelancer alert quick start flow, please refer to **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
 
 ### 1. Installation & Monorepo Setup
 ```bash
@@ -76,6 +88,8 @@ Or launch components individually:
 npm run dev:api     # Fastify REST API on http://localhost:3001
 npm run dev:worker  # Stellar Horizon & Soroban Ingestion Worker
 npm run dev:web     # Next.js Dashboard on http://localhost:3000
+npm run cli:tui     # Interactive terminal dashboard
+npm run daemon:start # Start headless daemon mode
 ```
 
 ### 5. Test Live Stellar Payment Ingestion
@@ -84,11 +98,18 @@ Fund a fresh keypair on Stellar Testnet via Friendbot and verify automated inges
 npx tsx --env-file=apps/api/.env apps/api/scripts/seed-and-trigger-payment.ts
 ```
 
+### 6. Validate Dependabot Configuration
+Verify the automated dependency update configuration:
+```bash
+npm run validate:dependabot
+```
+
 ---
 
 ## 🏆 Grant Qualification & Documentation
 
 - **Drips Wave Audit & Readiness Report**: See **[drips_wave_readiness_audit.md](file:///C:/Users/user/.gemini/antigravity-ide/brain/12528373-9966-4327-97c9-8c7388be13f6/drips_wave_readiness_audit.md)** for full reviewer scoring & roadmap.
+- **Local Setup & Freelancer Quick Start**: See **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
 - **Grant Submission Qualification Matrix**: See **[SUBMISSION.md](SUBMISSION.md)**.
 - **System Design & API Specs**: See **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
@@ -102,6 +123,18 @@ npx tsx --env-file=apps/api/.env apps/api/scripts/seed-and-trigger-payment.ts
 Join our official Telegram community to ask questions, chat with maintainers, discuss Drips Wave sprint tasks, and stay updated on new releases:
 
 👉 **[Join Stellar Alerts on Telegram](https://t.me/+uElHrnWMb180MWM0)**
+
+---
+
+## 🤖 Automated Dependency Management
+
+Dependabot is configured to automatically update dependencies weekly with grouped PRs to reduce notification noise:
+
+- **JavaScript/npm workspace dependencies**: All workspace packages (`apps/*`, `packages/*`) are monitored for updates
+- **Docker images**: Base images in `docker-compose.yml` (postgres, redis, toxiproxy) are monitored 
+- **GitHub Actions**: Workflow dependencies (actions/checkout, setup-node, etc.) are monitored
+
+All updates run weekly on Mondays and are grouped by ecosystem to minimize PR volume. The configuration can be validated with `npm run validate:dependabot`.
 
 ---
 

@@ -138,24 +138,67 @@ export interface SsrfValidationOptions {
   dnsLookupFn?: (hostname: string) => Promise<string[]>;
 }
 
-function getPublicResolvedIps(resolvedIps: string[]): string[] {
-  return [...new Set(resolvedIps.filter((ip) => !isPrivateIp(ip)))];
-}
-
-function buildUrlForResolvedIp(targetUrl: string, resolvedIp: string): string {
-  const parsedUrl = new URL(targetUrl);
-  const isIpv6 = net.isIPv6(resolvedIp);
-  const host = isIpv6 ? `[${resolvedIp}]` : resolvedIp;
-  const port = parsedUrl.port || (parsedUrl.protocol === 'https:' ? '443' : '80');
-
-  const rewritten = new URL(targetUrl);
-  rewritten.hostname = host;
-  rewritten.port = port;
-
-  return rewritten.toString();
-}
+export const DEFAULT_MAX_REDIRECTS = 3;
+export const DEFAULT_MAX_REQUEST_BODY_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_RESPONSE_BODY_BYTES = 64 * 1024;
 
 const DEFAULT_ALLOWED_PORTS = [80, 443, 8080, 8443];
+
+function getBodyByteLength(body: BodyInit | null | undefined): number {
+  if (body === null || body === undefined) {
+    return 0;
+  }
+
+  if (typeof body === 'string') {
+    return Buffer.byteLength(body, 'utf8');
+  }
+
+  if (body instanceof URLSearchParams) {
+    return Buffer.byteLength(body.toString(), 'utf8');
+  }
+
+  if (body instanceof ArrayBuffer) {
+    return body.byteLength;
+  }
+
+  if (ArrayBuffer.isView(body)) {
+    return body.byteLength;
+  }
+
+  if (body instanceof Blob) {
+    return body.size;
+  }
+
+  if (body instanceof FormData) {
+    let size = 0;
+    for (const entry of body.values()) {
+      if (typeof entry === 'string') {
+        size += Buffer.byteLength(entry, 'utf8');
+      } else if (entry instanceof Blob) {
+        size += entry.size;
+      }
+    }
+    return size;
+  }
+
+  return 0;
+}
+
+function assertBodySizeLimit(
+  body: BodyInit | null | undefined,
+  maxBytes: number,
+  label: string,
+  targetUrl: string,
+): void {
+  const size = getBodyByteLength(body);
+  if (size > maxBytes) {
+    throw new SsrfValidationError(
+      `${label} exceeds the maximum size (${size} bytes > ${maxBytes} bytes)`,
+      targetUrl,
+      `${label.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')}_TOO_LARGE`,
+    );
+  }
+}
 
 /**
  * Default DNS resolver that resolves both IPv4 and IPv6 addresses.
@@ -265,48 +308,53 @@ export async function validateUrlForSsrf(
  */
 export async function ssrfSafeFetch(
   inputUrl: string,
-  init: RequestInit & { maxRedirects?: number; ssrfOptions?: SsrfValidationOptions } = {},
+  init: RequestInit & {
+    maxRedirects?: number;
+    maxRequestBytes?: number;
+    maxResponseBytes?: number;
+    ssrfOptions?: SsrfValidationOptions;
+  } = {},
 ): Promise<Response> {
-  const maxRedirects = init.maxRedirects ?? 3;
+  const maxRedirects = init.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  const maxRequestBytes = init.maxRequestBytes ?? DEFAULT_MAX_REQUEST_BODY_BYTES;
+  const maxResponseBytes = init.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BODY_BYTES;
   let currentUrl = inputUrl;
   let redirectsCount = 0;
 
   while (true) {
-    const validation = await validateUrlForSsrf(currentUrl, init.ssrfOptions);
-    const candidateUrls = validation.resolvedIps.map((ip) => buildUrlForResolvedIp(currentUrl, ip));
+    assertBodySizeLimit(init.body, maxRequestBytes, 'Request body', currentUrl);
 
-    let lastError: unknown;
-    let handledRedirect = false;
+    // Validate current hop
+    await validateUrlForSsrf(currentUrl, init.ssrfOptions);
 
-    for (const candidateUrl of candidateUrls) {
-      try {
-        const response = await fetch(candidateUrl, {
-          ...init,
-          redirect: 'manual',
-        });
+    // Fetch with redirect set to manual so we inspect and validate every redirect location
+    const response = await fetch(currentUrl, {
+      ...init,
+      redirect: 'manual',
+    });
 
-        const isRedirect = [301, 302, 303, 307, 308].includes(response.status);
+    const contentLength = response.headers.get('content-length');
+    if (contentLength) {
+      const parsedLength = Number.parseInt(contentLength, 10);
+      if (!Number.isNaN(parsedLength) && parsedLength > maxResponseBytes) {
+        throw new SsrfValidationError(
+          `Response exceeded the maximum allowed size (${parsedLength} bytes > ${maxResponseBytes} bytes)`,
+          currentUrl,
+          'RESPONSE_TOO_LARGE',
+        );
+      }
+    }
 
-        if (isRedirect) {
-          if (redirectsCount >= maxRedirects) {
-            throw new SsrfValidationError(`Too many redirects (exceeded limit of ${maxRedirects})`, currentUrl, 'MAX_REDIRECTS_EXCEEDED');
-          }
+    const isRedirect = [301, 302, 303, 307, 308].includes(response.status);
 
-          const location = response.headers.get('location');
-          if (!location) {
-            throw new SsrfValidationError('Redirect response missing Location header', currentUrl, 'MISSING_REDIRECT_LOCATION');
-          }
+    if (isRedirect) {
+      if (redirectsCount >= maxRedirects) {
+        throw new SsrfValidationError(`Too many redirects (exceeded limit of ${maxRedirects})`, currentUrl, 'MAX_REDIRECTS_EXCEEDED');
+      }
 
-          const nextUrl = new URL(location, currentUrl).toString();
-          currentUrl = nextUrl;
-          redirectsCount++;
-          handledRedirect = true;
-          break;
-        }
-
-        return response;
-      } catch (error) {
-        lastError = error;
+      const location = response.headers.get('location');
+      if (!location) {
+        throw new SsrfValidationError('Redirect response missing Location header', currentUrl, 'MISSING_REDIRECT_LOCATION');
       }
     }
 
@@ -314,11 +362,18 @@ export async function ssrfSafeFetch(
       continue;
     }
 
-    if (lastError) {
-      throw lastError;
+    const clonedResponse = response.clone();
+    const responseBodyText = await clonedResponse.text();
+    const responseBodyBytes = Buffer.byteLength(responseBodyText, 'utf8');
+    if (responseBodyBytes > maxResponseBytes) {
+      throw new SsrfValidationError(
+        `Response body exceeded the maximum allowed size (${responseBodyBytes} bytes > ${maxResponseBytes} bytes)`,
+        currentUrl,
+        'RESPONSE_TOO_LARGE',
+      );
     }
 
-    break;
+    return response;
   }
 
   return new Response(null, { status: 204 });

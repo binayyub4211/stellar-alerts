@@ -10,13 +10,20 @@ const envSchema = z.object({
   REDIS_SENTINEL_MASTER_NAME: z.string().optional().default("mymaster"),
   REDIS_SENTINEL_PASSWORD: z.string().optional(),
   PORT: z.string().optional().default("3001"),
+  // Comma-separated browser origins allowed to send cookie-authenticated mutations.
+  CSRF_ALLOWED_ORIGINS: z.string().optional().default("http://localhost:3000"),
   MASTER_ENCRYPTION_KEY: z.string().min(32).describe('Master key for encrypting webhook secrets (AES-256-GCM)'),
   MASTER_ENCRYPTION_KEY_VERSION: z.string().optional().default("1"),
   MASTER_ENCRYPTION_OLD_KEYS: z.string().optional().default("{}"),
+  // Discord application public key used to verify interaction webhooks
+  // (acknowledge / snooze / re-route buttons on alert messages). Unset disables
+  // the /integrations/discord/interactions route.
+  DISCORD_PUBLIC_KEY: z.string().optional(),
   // Requests/minute allowed per client before @fastify/rate-limit responds 429.
   // Overridable so load-test runs (k6, etc.) can measure real server capacity
   // instead of hitting the rate limiter almost immediately.
   RATE_LIMIT_MAX: z.coerce.number().int().positive().optional().default(100),
+  WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().max(20).optional().default(5),
   SOROBAN_RENT_WORKER_ENABLED: z.string().optional().default("true"),
   SOROBAN_RENT_WORKER_INTERVAL_MS: z.string().optional().default("60000"),
   SOROBAN_RENT_WORKER_SECRET: z.string().optional(),
@@ -31,8 +38,27 @@ const envSchema = z.object({
   SOROBAN_INDEXER_BENCHMARK_DATA_ROWS: z.string().optional().default("10000"),
   SOROBAN_STAKING_REWARD_WORKER_ENABLED: z.string().optional().default("true"),
   SOROBAN_SAC_WORKER_ENABLED: z.string().optional().default("true"),
+  // Restoration sentinel (#1005): detects evicted contract instance/code keys
+  // and prices restoration before invocation fails.
+  SOROBAN_RESTORATION_WORKER_ENABLED: z.string().optional().default("true"),
+  SOROBAN_RESTORATION_WORKER_INTERVAL_MS: z.string().optional().default("60000"),
+  SOROBAN_RESTORATION_WARNING_LEDGERS: z.string().optional().default("17280"),
+  SOROBAN_RESTORATION_CRITICAL_LEDGERS: z.string().optional().default("1000"),
+  SOROBAN_RESTORATION_MIN_RESTORE_LEDGERS: z.string().optional().default("4096"),
+  // Impermanent loss watcher (#1007).
+  IL_WATCHER_INTERVAL_MS: z.string().optional().default("60000"),
+  IL_WATCHER_DEFAULT_THRESHOLD_PCT: z.string().optional().default("5"),
+  // Multi-sig signer inactivity / key-weight-decay watcher (#1008).
+  MULTISIG_INACTIVITY_WORKER_ENABLED: z.string().optional().default("true"),
+  MULTISIG_INACTIVITY_INTERVAL_MS: z.string().optional().default("3600000"),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional().default("http://localhost:4318/v1/traces"),
   OTEL_SERVICE_NAME: z.string().optional().default("stellar-alerts-api"),
+  // Workers register their own tracer so Jaeger can attribute webhook dispatch
+  // spans to the dispatcher rather than to the API service.
+  OTEL_WORKER_SERVICE_NAME: z.string().optional().default("stellar-alerts-webhook-dispatcher"),
+  // Opt-in Prometheus scrape port for worker processes. Unset by default, in
+  // which case no listener is opened.
+  WORKER_METRICS_PORT: z.coerce.number().int().positive().optional(),
   // Provider timeouts & deadlines (#303)
   EXTERNAL_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional().default(10000),
   HORIZON_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional().default(10000),
@@ -51,8 +77,37 @@ const envSchema = z.object({
   // Wasm contract upload/analysis limits for the wasm-analyzer module.
   WASM_ANALYZER_MAX_UPLOAD_BYTES: z.coerce.number().int().positive().optional().default(5 * 1024 * 1024),
   WASM_ANALYZER_TIMEOUT_MS: z.coerce.number().int().positive().optional().default(5000),
+  // Asynchronous export jobs (#321)
+  EXPORT_WORKER_ENABLED: z.string().optional().default("true"),
+  // Directory for generated export files; empty = <os tmpdir>/stellar-alerts-exports.
+  EXPORT_STORAGE_DIR: z.string().optional().default(""),
+  // How long a finished export stays downloadable before cleanup deletes it.
+  EXPORT_TTL_SECONDS: z.coerce.number().int().positive().optional().default(86400),
+  // Lifetime of each signed download URL handed out by GET /exports/:id.
+  EXPORT_DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().optional().default(300),
+  EXPORT_MAX_ROWS: z.coerce.number().int().positive().optional().default(100000),
+  EXPORT_BATCH_SIZE: z.coerce.number().int().positive().optional().default(500),
+  EXPORT_MAX_ACTIVE_JOBS_PER_USER: z.coerce.number().int().positive().optional().default(3),
+  EXPORT_WORKER_CONCURRENCY: z.coerce.number().int().positive().optional().default(2),
+  EXPORT_CLEANUP_INTERVAL_MS: z.coerce.number().int().positive().optional().default(600000),
+  // A job stuck in `running` longer than this (e.g. worker crash) is failed.
+  EXPORT_STALE_JOB_MS: z.coerce.number().int().positive().optional().default(1800000),
 });
 export type Env = z.infer<typeof envSchema>;
+
+// Export-job defaults, shared by the dev/test fallbacks below (#321).
+const EXPORT_DEFAULTS = {
+  EXPORT_WORKER_ENABLED: "true",
+  EXPORT_STORAGE_DIR: "",
+  EXPORT_TTL_SECONDS: 86400,
+  EXPORT_DOWNLOAD_URL_TTL_SECONDS: 300,
+  EXPORT_MAX_ROWS: 100000,
+  EXPORT_BATCH_SIZE: 500,
+  EXPORT_MAX_ACTIVE_JOBS_PER_USER: 3,
+  EXPORT_WORKER_CONCURRENCY: 2,
+  EXPORT_CLEANUP_INTERVAL_MS: 600000,
+  EXPORT_STALE_JOB_MS: 1800000,
+};
 
 const parseEnv = (): Env => {
   const envInput = {
@@ -79,6 +134,11 @@ const parseEnv = (): Env => {
     SOROBAN_INDEXER_BENCHMARK_DATA_ROWS: process.env.SOROBAN_INDEXER_BENCHMARK_DATA_ROWS || "10000",
     SOROBAN_STAKING_REWARD_WORKER_ENABLED: process.env.SOROBAN_STAKING_REWARD_WORKER_ENABLED || "true",
     SOROBAN_SAC_WORKER_ENABLED: process.env.SOROBAN_SAC_WORKER_ENABLED || "true",
+    SOROBAN_RESTORATION_WORKER_ENABLED: process.env.SOROBAN_RESTORATION_WORKER_ENABLED || "true",
+    SOROBAN_RESTORATION_WORKER_INTERVAL_MS: process.env.SOROBAN_RESTORATION_WORKER_INTERVAL_MS || "60000",
+    SOROBAN_RESTORATION_WARNING_LEDGERS: process.env.SOROBAN_RESTORATION_WARNING_LEDGERS || "17280",
+    SOROBAN_RESTORATION_CRITICAL_LEDGERS: process.env.SOROBAN_RESTORATION_CRITICAL_LEDGERS || "1000",
+    SOROBAN_RESTORATION_MIN_RESTORE_LEDGERS: process.env.SOROBAN_RESTORATION_MIN_RESTORE_LEDGERS || "4096",
     OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://localhost:4318/v1/traces",
     OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME || "stellar-alerts-api",
   };
@@ -126,7 +186,11 @@ const parseEnv = (): Env => {
       REDIS_SENTINEL_MASTER_NAME: "mymaster",
       REDIS_SENTINEL_PASSWORD: undefined,
       PORT: "3001",
+      MASTER_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef",
+      MASTER_ENCRYPTION_KEY_VERSION: "1",
+      MASTER_ENCRYPTION_OLD_KEYS: "{}",
       RATE_LIMIT_MAX: 100,
+      WORKER_MAX_ATTEMPTS: 5,
       SOROBAN_RENT_WORKER_ENABLED: "true",
       SOROBAN_RENT_WORKER_INTERVAL_MS: "60000",
       SOROBAN_RENT_WORKER_SECRET: undefined,
@@ -140,6 +204,12 @@ const parseEnv = (): Env => {
       SOROBAN_INDEXER_BENCHMARK_INTERVAL_MS: "3600000",
       SOROBAN_INDEXER_BENCHMARK_DATA_ROWS: "10000",
       SOROBAN_STAKING_REWARD_WORKER_ENABLED: "true",
+      SOROBAN_SAC_WORKER_ENABLED: "true",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/traces",
+      OTEL_SERVICE_NAME: "stellar-alerts-api",
+      WASM_ANALYZER_MAX_UPLOAD_BYTES: 5 * 1024 * 1024,
+      WASM_ANALYZER_TIMEOUT_MS: 5000,
+      ...EXPORT_DEFAULTS,
     } as unknown as Env;
   }
 
@@ -152,7 +222,9 @@ const parseEnv = (): Env => {
     REDIS_SENTINEL_MASTER_NAME: "mymaster",
     REDIS_SENTINEL_PASSWORD: undefined,
     PORT: "3001",
+    CSRF_ALLOWED_ORIGINS: "http://localhost:3000",
     RATE_LIMIT_MAX: 100,
+    WORKER_MAX_ATTEMPTS: 5,
     SOROBAN_RENT_WORKER_ENABLED: "true",
     SOROBAN_RENT_WORKER_INTERVAL_MS: "60000",
     SOROBAN_RENT_WORKER_SECRET: undefined,
@@ -166,6 +238,7 @@ const parseEnv = (): Env => {
     SOROBAN_INDEXER_BENCHMARK_INTERVAL_MS: "3600000",
     SOROBAN_INDEXER_BENCHMARK_DATA_ROWS: "10000",
     SOROBAN_STAKING_REWARD_WORKER_ENABLED: "true",
+    ...EXPORT_DEFAULTS,
   } as unknown as Env;
 };
 
