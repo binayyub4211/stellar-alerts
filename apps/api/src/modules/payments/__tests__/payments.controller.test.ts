@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PaymentsController } from '../payments.controller';
 import { paymentsService } from '../payments.service';
+import { ValidationError } from '../../../lib/errors';
 
 vi.mock('../payments.service', () => ({
   paymentsService: {
@@ -75,9 +76,10 @@ describe('PaymentsController', () => {
     it('rejects an unknown sortBy value', async () => {
       mockRequest = { query: { sortBy: 'fromAddress' }, user: { id: 'user-1' } };
 
-      await paymentsController.getPayments(mockRequest, mockReply);
+      const error = await paymentsController.getPayments(mockRequest, mockReply).catch((e) => e);
 
-      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.statusCode).toBe(400);
       expect(paymentsService.getPayments).not.toHaveBeenCalled();
     });
 
@@ -87,9 +89,10 @@ describe('PaymentsController', () => {
         user: { id: 'user-1' },
       };
 
-      await paymentsController.getPayments(mockRequest, mockReply);
+      const error = await paymentsController.getPayments(mockRequest, mockReply).catch((e) => e);
 
-      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(error).toBeInstanceOf(ValidationError);
+      expect(error.statusCode).toBe(400);
       expect(paymentsService.getPayments).not.toHaveBeenCalled();
     });
   });

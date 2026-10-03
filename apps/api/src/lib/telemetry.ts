@@ -7,7 +7,15 @@ import { env } from '../config/env';
 let sdk: NodeSDK | null = null;
 let initialized = false;
 
-export async function startTelemetry(): Promise<void> {
+/**
+ * Boots the OpenTelemetry SDK.
+ *
+ * `serviceNameOverride` lets workers register under their own service identity
+ * (see `OTEL_WORKER_SERVICE_NAME`) while still reusing the API's exporter and
+ * instrumentation setup. Calling this more than once is a no-op, so it is safe
+ * to call from worker bootstraps.
+ */
+export async function startTelemetry(serviceNameOverride?: string): Promise<void> {
   if (initialized) return;
 
   const traceExporter = new OTLPTraceExporter({
@@ -15,7 +23,7 @@ export async function startTelemetry(): Promise<void> {
   });
 
   sdk = new NodeSDK({
-    serviceName: env.OTEL_SERVICE_NAME,
+    serviceName: serviceNameOverride ?? env.OTEL_SERVICE_NAME,
     traceExporter,
     instrumentations: [
       new HttpInstrumentation({
@@ -29,7 +37,9 @@ export async function startTelemetry(): Promise<void> {
 
   sdk.start();
   initialized = true;
-  console.log(`[Telemetry] OpenTelemetry initialized for service: ${env.OTEL_SERVICE_NAME}`);
+  console.log(
+    `[Telemetry] OpenTelemetry initialized for service: ${serviceNameOverride ?? env.OTEL_SERVICE_NAME}`,
+  );
 }
 
 export async function shutdownTelemetry(): Promise<void> {

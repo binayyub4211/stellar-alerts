@@ -71,11 +71,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Build shared package
+        # The API's runtime import of @stellar-alerts/shared resolves to
+        # packages/shared/dist/index.js (the "main" field in its package.json).
+        # That directory only exists after the TypeScript compiler runs, so we
+        # must build it before starting the server.
+      - name: Build Shared Package (@stellar-alerts/shared)
+        run: npx tsc -p packages/shared/tsconfig.json
 
       - name: Sync database schema (wait + retry)
         working-directory: apps/api

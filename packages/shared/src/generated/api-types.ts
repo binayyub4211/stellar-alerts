@@ -53,6 +53,73 @@ export interface components {
         SuppressDeadLetterInput: {
             note?: string;
         };
+        SandboxReplayIdParams: {
+            replayId: string;
+        };
+        SandboxReplayInput: {
+            /**
+             * @default {
+             *       "status": 200,
+             *       "headers": {},
+             *       "body": "",
+             *       "delayMs": 0
+             *     }
+             */
+            mockResponse: {
+                /** @default 200 */
+                status: number;
+                /** @default {} */
+                headers: {
+                    [key: string]: string;
+                };
+                /** @default  */
+                body: string;
+                /** @default 0 */
+                delayMs: number;
+            };
+        };
+        ListSandboxReplaysQuery: {
+            /** @enum {string} */
+            status?: "completed" | "failed";
+            /** @default 1 */
+            page: number;
+            /** @default 20 */
+            pageSize: number;
+        };
+        ErrorResponse: {
+            error: {
+                /** @description Stable, machine-readable error code (e.g. VALIDATION_ERROR, NOT_FOUND, CONFLICT). */
+                code: string;
+                /** @description Human-readable, client-safe message. Never contains internal/sensitive detail. */
+                message: string;
+                /** @description Optional structured detail, e.g. field-level validation errors. */
+                details?: unknown;
+                /** @description Correlation id — also returned as the x-request-id response header. */
+                requestId: string;
+            };
+        };
+        CreateExportInput: {
+            /** @enum {string} */
+            type: "ledger_csv" | "ledger_pdf" | "tax_csv";
+            walletId?: string;
+            periodStart?: string;
+            periodEnd?: string;
+            /** @enum {string} */
+            format?: "cointracker" | "koinly" | "irs8949";
+        };
+        ExportIdParams: {
+            id: string;
+        };
+        ListExportsQuery: {
+            /** @default 1 */
+            page: number;
+            /** @default 20 */
+            pageSize: number;
+        };
+        DownloadExportQuery: {
+            expires: number;
+            sig: string;
+        };
     };
     responses: never;
     parameters: never;
