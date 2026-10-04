@@ -25,28 +25,35 @@ export const MfaModal: React.FC<MfaModalProps> = ({ isOpen, onClose }) => {
     return headers;
   };
 
-  const checkMFAStatus = async () => {
+  const checkMFAStatus = async (isMounted: () => boolean) => {
+    if (typeof window === 'undefined' || !isMounted()) return;
     setIsLoading(true);
     try {
       const res = await fetch('http://localhost:3001/auth/mfa/status', {
         headers: getHeaders(),
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && isMounted() && typeof window !== 'undefined') {
         setMfaEnabled(data.mfaEnabled);
       }
-    } catch (error) {
-      console.error('Failed to check MFA status:', error);
+    } catch {
+      // Ignore network errors during test teardown or unmount
     } finally {
-      setIsLoading(false);
+      if (isMounted() && typeof window !== 'undefined') {
+        setIsLoading(false);
+      }
     }
   };
 
   // Check MFA status on mount
   useEffect(() => {
+    let mounted = true;
     if (isOpen) {
-      void checkMFAStatus();
+      void checkMFAStatus(() => mounted);
     }
+    return () => {
+      mounted = false;
+    };
   }, [isOpen]);
 
   const handleSetupMFA = async () => {
@@ -147,15 +154,24 @@ export const MfaModal: React.FC<MfaModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mfa-modal-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    >
       <div className="bg-[#0c0c14] border border-white/10 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h2 id="mfa-modal-title" className="text-2xl font-bold text-white flex items-center gap-2">
             <span>🔐</span> Multi-Factor Auth
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close Multi-Factor Auth Modal"
             className="text-gray-400 hover:text-white transition-colors text-2xl"
           >
             ×

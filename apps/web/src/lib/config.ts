@@ -4,7 +4,7 @@ let cachedWebConfig: WebEnv | null = null;
 
 export function getWebConfig(): WebEnv {
   if (!cachedWebConfig) {
-    cachedWebConfig = validateProcessEnv(
+    cachedWebConfig = validateProcessEnv<WebEnv>(
       webEnvSchema,
       {
         NODE_ENV: process.env.NODE_ENV,
@@ -16,7 +16,7 @@ export function getWebConfig(): WebEnv {
       { isProduction: process.env.NODE_ENV === 'production' },
     );
   }
-  return cachedWebConfig;
+  return cachedWebConfig!;
 }
 
 export function printWebDiagnostics(): string {

@@ -397,7 +397,7 @@ export type NotificationDeliveryCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   payment: Prisma.PaymentCreateNestedOneWithoutDeliveriesInput
-  user?: Prisma.UserCreateNestedOneWithoutDeliveriesInput
+  user?: Prisma.UserCreateNestedOneWithoutNotificationDeliveriesInput
   attempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutDeliveryInput
 }
 
@@ -433,7 +433,7 @@ export type NotificationDeliveryUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payment?: Prisma.PaymentUpdateOneRequiredWithoutDeliveriesNestedInput
-  user?: Prisma.UserUpdateOneWithoutDeliveriesNestedInput
+  user?: Prisma.UserUpdateOneWithoutNotificationDeliveriesNestedInput
   attempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutDeliveryNestedInput
 }
 
@@ -779,7 +779,7 @@ export type NotificationDeliveryCreateWithoutPaymentInput = {
   terminalAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  user?: Prisma.UserCreateNestedOneWithoutDeliveriesInput
+  user?: Prisma.UserCreateNestedOneWithoutNotificationDeliveriesInput
   attempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutDeliveryInput
 }
 
@@ -840,7 +840,7 @@ export type NotificationDeliveryCreateWithoutAttemptsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   payment: Prisma.PaymentCreateNestedOneWithoutDeliveriesInput
-  user?: Prisma.UserCreateNestedOneWithoutDeliveriesInput
+  user?: Prisma.UserCreateNestedOneWithoutNotificationDeliveriesInput
 }
 
 export type NotificationDeliveryUncheckedCreateWithoutAttemptsInput = {
@@ -890,7 +890,7 @@ export type NotificationDeliveryUpdateWithoutAttemptsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   payment?: Prisma.PaymentUpdateOneRequiredWithoutDeliveriesNestedInput
-  user?: Prisma.UserUpdateOneWithoutDeliveriesNestedInput
+  user?: Prisma.UserUpdateOneWithoutNotificationDeliveriesNestedInput
 }
 
 export type NotificationDeliveryUncheckedUpdateWithoutAttemptsInput = {
@@ -1005,7 +1005,7 @@ export type NotificationDeliveryUpdateWithoutPaymentInput = {
   terminalAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  user?: Prisma.UserUpdateOneWithoutDeliveriesNestedInput
+  user?: Prisma.UserUpdateOneWithoutNotificationDeliveriesNestedInput
   attempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutDeliveryNestedInput
 }
 
