@@ -1,7 +1,13 @@
 import { z } from 'zod';
 
+// Prisma IDs are CUIDs (model id fields use `@default(cuid())`), so route
+// params must be strict CUIDs: `c` prefix + base36 lowercase. Anything else
+// ('' , 'invalid-id', '123', 'not-a-cuid', over-long strings) fails schema
+// validation → 400 VALIDATION_ERROR instead of a misleading 404.
 export const deadLetterIdSchema = z.object({
-  id: z.string().min(1),
+  id: z
+    .string()
+    .regex(/^c[a-z0-9]{24,}$/, 'Invalid dead letter id'),
 });
 
 export const listDeadLettersQuerySchema = z.object({

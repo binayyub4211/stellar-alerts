@@ -16,7 +16,7 @@ export class DeadLettersController {
 
     const userId = (request as any).user.id;
     const result = await deadLettersService.list(userId, parsed.data);
-    return reply.send({ success: true, ...result });
+    return reply.send({ success: true, deadLetters: result.items, pagination: result.pagination });
   }
 
   async get(request: FastifyRequest, reply: FastifyReply) {
@@ -25,9 +25,16 @@ export class DeadLettersController {
       throw zodValidationError(parsed, 'Invalid parameters');
     }
 
-    const userId = (request as any).user.id;
-    const deadLetter = await deadLettersService.get(parsed.data.id, userId);
-    return reply.send({ success: true, deadLetter });
+    try {
+      const userId = (request as any).user.id;
+      const deadLetter = await deadLettersService.get(parsed.data.id, userId);
+      return reply.send({ success: true, deadLetter });
+    } catch (error: any) {
+      if (error.message && error.message.startsWith('Dead letter')) {
+        throw new NotFoundError(error.message);
+      }
+      throw error;
+    }
   }
 
   async replay(request: FastifyRequest, reply: FastifyReply) {

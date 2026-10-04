@@ -13,14 +13,16 @@ import { prisma } from './prisma';
 import { createLogger } from './logger';
 import { publishDeliveryEvent } from './realtime';
 import { deliverWithIdempotency } from './delivery';
+import { instrumentedWebhookFetch } from './webhook-telemetry';
 import { persistDeadLetter } from './dead-letter';
-import { validateUrlForSsrf } from '../utils/ssrf';
+import { ssrfSafeFetch, validateUrlForSsrf } from '../utils/ssrf';
 import { decryptPersonalField } from '../utils/privacy';
 import { dispatchWhatsAppAlert } from '../utils/whatsapp';
 import { emailService } from '../services/email.service';
 import { dispatchDiscordAlert } from '../utils/discord';
 import { dispatchSlackAlert, isValidSlackWebhookUrl } from '../utils/slack';
 import { dispatchPushNotification, PushNotificationData } from '../utils/push-protocol';
+import { classifyWorkerError, getWorkerMaxAttempts, PermanentWorkerError } from './worker-retry-policy';
 
 function decryptWebhookSecret(webhook: {
   keyVersion: number;
@@ -50,6 +52,18 @@ export interface AlertJobData {
   receivedAt: string;
   /** Correlation ID propagated from the originating HTTP request, if any. */
   requestId?: string;
+  /**
+   * W3C traceparent of the payment-detection request that produced this job.
+   * Carried across the BullMQ boundary so webhook dispatch spans join the
+   * originating trace instead of starting a disconnected one.
+   */
+  traceparent?: string;
+}
+
+/** Per-dispatch context threaded into the circuit breaker action. */
+interface WebhookDispatchMeta {
+  webhookId: string;
+  traceparent?: string;
 }
 
 const redisHost = process.env.REDIS_HOST || "localhost";
@@ -171,18 +185,18 @@ async function getOrCreateCircuitBreaker(
   }
 
   const breaker: CircuitBreaker<any> = new CircuitBreaker(
-    async (url: string, payload: string, headers: Record<string, string>) => {
-      const response = await fetchWithTimeout(
-        url,
-        {
-          method: "POST",
-          headers,
-          body: payload,
-        },
-        env.WEBHOOK_TIMEOUT_MS,
-        undefined,
-        'Webhook',
-      );
+    async (url: string, payload: string, headers: Record<string, string>, meta?: WebhookDispatchMeta) => {
+      // Routed through the instrumented transport so every attempt contributes
+      // DNS / TCP / TLS / TTFB / response-stream spans and histograms, and so
+      // the subscriber receives a W3C traceparent it can join.
+      const response = await instrumentedWebhookFetch(url, {
+        method: "POST",
+        headers,
+        body: payload,
+        timeoutMs: env.WEBHOOK_TIMEOUT_MS,
+        webhookId: meta?.webhookId,
+        traceparent: meta?.traceparent,
+      });
 
       if (response.status === 429) {
         const error = new Error(`Rate limited: ${response.status}`) as Error & {
@@ -279,7 +293,12 @@ async function updateCircuitBreakerState(
   });
 }
 
-export async function dispatchWebhookAndLog(webhookId: string, payload: any, retryAfterBackoff = false) {
+export async function dispatchWebhookAndLog(
+  webhookId: string,
+  payload: any,
+  retryAfterBackoff = false,
+  traceparent?: string,
+) {
   let targetUrl: string | undefined;
 
   try {
@@ -359,10 +378,11 @@ export async function dispatchWebhookAndLog(webhookId: string, payload: any, ret
     const signature = generateWebhookSignature(payloadString, webhookSecret);
 
     const breaker = await getOrCreateCircuitBreaker(webhookId);
+    const dispatchMeta: WebhookDispatchMeta = { webhookId, traceparent };
     const response = await breaker.fire(webhook.url, payloadString, {
       "Content-Type": "application/json",
       "X-Stellar-Signature": signature.headerValue,
-    });
+    }, dispatchMeta);
 
     const responseBody = await response.text();
 
@@ -415,7 +435,7 @@ export async function dispatchWebhookAndLog(webhookId: string, payload: any, ret
       if (!retryAfterBackoff) {
         queueLog.warn(`[WebhookDispatch] Rate limited by ${targetUrl}; retrying after ${delayMs}ms`);
         await waitForAdaptiveBackoff(delayMs);
-        return dispatchWebhookAndLog(webhookId, payload, true);
+        return dispatchWebhookAndLog(webhookId, payload, true, traceparent);
       }
 
       queueLog.warn(`[WebhookDispatch] Endpoint still rate limited after adaptive retry for ${webhookId}`);
@@ -462,7 +482,27 @@ export async function dispatchWebhookAndLog(webhookId: string, payload: any, ret
   }
 }
 
-export const paymentAlertWorkerProcessor = async (job: { data: AlertJobData }) => processAlertDispatch(job.data);
+function validateAlertJobData(data: AlertJobData): void {
+  if (!data || typeof data !== 'object' || typeof data.paymentId !== 'string' || data.paymentId.length === 0) {
+    throw new PermanentWorkerError('Alert job is missing paymentId', 'missing_payment_id');
+  }
+  if (typeof data.txHash !== 'string' || data.txHash.length === 0) {
+    throw new PermanentWorkerError('Alert job is missing txHash', 'missing_tx_hash');
+  }
+}
+
+export const paymentAlertWorkerProcessor = async (job: { data: AlertJobData }) => {
+  try {
+    validateAlertJobData(job.data);
+    return await processAlertDispatch(job.data);
+  } catch (error) {
+    const classification = classifyWorkerError(error);
+    if (classification.classification === 'permanent' && !(error instanceof PermanentWorkerError)) {
+      throw new PermanentWorkerError(classification.message, classification.reason);
+    }
+    throw error;
+  }
+};
 
 export function createRedisConnectionConfig() {
   const sentinelsRaw = process.env.REDIS_SENTINELS;
@@ -511,7 +551,7 @@ try {
   alertQueue = new Queue<AlertJobData>("payment-alerts", {
     connection,
     defaultJobOptions: {
-      attempts: 5,
+      attempts: getWorkerMaxAttempts(),
       backoff: {
         type: "exponential",
         delay: 2000,
@@ -526,9 +566,7 @@ try {
 
   alertWorker = new Worker<AlertJobData>(
     'payment-alerts',
-    async (job) => {
-      return processAlertDispatch(job.data);
-    },
+    paymentAlertWorkerProcessor,
     { connection, concurrency: env.ALERT_WORKER_CONCURRENCY },
   );
 
@@ -540,27 +578,7 @@ try {
   });
 
   alertQueueEvents.on("failed", async ({ jobId, failedReason }) => {
-    if (!jobId || !alertQueue || !dlqQueue) return;
-    try {
-      const job = await Job.fromId(alertQueue, jobId);
-      if (job && job.attemptsMade >= (job.opts.attempts || 5)) {
-        await dlqQueue.add("dispatch-alert-failed", job.data, {
-          jobId: `dlq-${jobId}`,
-        });
-        // Persist a dead-letter so operators can inspect/replay/suppress this
-        // terminal failure even after the BullMQ queue is cleaned up (#273).
-        void persistDeadLetter({
-          channel: "queue",
-          destination: jobId,
-          paymentId: job.data?.paymentId ?? null,
-          payload: job.data ?? null,
-          error: failedReason || "Alert delivery job reached max attempts",
-        });
-        queueLog.warn({ jobId, failedReason }, 'Moved failed job to DLQ');
-      }
-    } catch (e: any) {
-      queueLog.warn({ jobId, err: e.message }, 'Could not route job to DLQ');
-    }
+    await failedJobHandler({ jobId, failedReason });
   });
 
   queueLog.info({ host: redisHost, port: redisPort }, '📡 BullMQ payment-alerts queue initialized');
@@ -572,16 +590,34 @@ export async function failedJobHandler({ jobId, failedReason }: { jobId?: string
   if (!jobId || !alertQueue || !dlqQueue) return;
   try {
     const job = await Job.fromId(alertQueue, jobId);
-    if (job && job.attemptsMade >= (job.opts.attempts || 5)) {
+    if (!job) return;
+
+    const classification = classifyWorkerError(failedReason || 'Alert delivery job failed');
+    const maxAttempts = job.opts.attempts || getWorkerMaxAttempts();
+    const reachedAttemptCap = job.attemptsMade >= maxAttempts;
+
+    if (classification.classification === 'permanent' || reachedAttemptCap) {
       await dlqQueue.add("dispatch-alert-failed", job.data, {
         jobId: `dlq-${jobId}`,
       });
+      const wallet = job.data?.walletId
+        ? await prisma.wallet.findUnique({ where: { id: job.data.walletId }, select: { userId: true } })
+        : null;
       await persistDeadLetter({
         channel: "queue",
         destination: jobId,
+        deliveryKey: `queue:${jobId}`,
         paymentId: (job.data as AlertJobData | undefined)?.paymentId ?? null,
+        userId: wallet?.userId ?? null,
         payload: job.data ?? null,
-        error: failedReason || "Alert delivery job reached max attempts",
+        error: classification.message || "Alert delivery job reached max attempts",
+        failureClass: classification.classification,
+        failureReason: reachedAttemptCap && classification.classification === 'retryable'
+          ? 'max_attempts_exceeded'
+          : classification.reason,
+        jobId,
+        attemptsMade: job.attemptsMade,
+        maxAttempts,
       });
       queueLog.info(
         `[Queue] 📨 Moved failed job ${jobId} to DLQ. Reason: ${failedReason}`,
@@ -676,7 +712,7 @@ export async function processAlertDispatch(data: AlertJobData) {
             },
             async () => {
               await workerFairnessManager.acquireProviderBudget('webhook');
-              await dispatchWebhookAndLog(webhook.id, webhookPayload);
+              await dispatchWebhookAndLog(webhook.id, webhookPayload, false, data.traceparent);
             },
           ).catch((err: any) => {
             queueLog.warn(`[Worker] Webhook dispatch had errors: ${err.message}`);

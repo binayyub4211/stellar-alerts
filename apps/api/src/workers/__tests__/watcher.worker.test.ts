@@ -1,28 +1,39 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../lib/prisma', () => ({
-  prisma: {
-    payment: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-    },
-    ingestionCursor: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-      upsert: vi.fn(),
-    },
-    notificationPreference: {
-      findUnique: vi.fn().mockResolvedValue(null),
-    },
-    alertRule: {
-      findMany: vi.fn().mockResolvedValue([]),
-    },
-    alertRuleDispatchLog: {
-      findUnique: vi.fn().mockResolvedValue(null),
-      create: vi.fn().mockResolvedValue({}),
-    },
-  },
+  prisma: (() => {
+    const paymentCreate = vi.fn();
+    const outboxCreateMany = vi.fn();
+    const transaction = {
+      payment: { create: paymentCreate },
+      outboxEvent: { createMany: outboxCreateMany },
+    };
+
+    return {
+      payment: {
+        findUnique: vi.fn(),
+        create: paymentCreate,
+      },
+      ingestionCursor: {
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        upsert: vi.fn(),
+      },
+      notificationPreference: {
+        findUnique: vi.fn().mockResolvedValue(null),
+      },
+      alertRule: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      alertRuleDispatchLog: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+      },
+      outboxEvent: { createMany: outboxCreateMany },
+      $transaction: vi.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+  })(),
 }));
 
 vi.mock('../../lib/stellar', () => ({
@@ -476,6 +487,7 @@ describe('processPaymentRecord — persisted AlertRule evaluator', () => {
     vi.mocked(prisma.alertRule.findMany).mockResolvedValue([]);
     vi.mocked(prisma.alertRuleDispatchLog.findUnique).mockResolvedValue(null as any);
     vi.mocked(prisma.notificationPreference.findUnique).mockResolvedValue(null as any);
+    vi.mocked(prisma.outboxEvent.createMany).mockResolvedValue({ count: 2 } as any);
   });
 
   it('enqueues an alert when an active AlertRule matches the payment', async () => {
@@ -488,6 +500,12 @@ describe('processPaymentRecord — persisted AlertRule evaluator', () => {
     expect(enqueuePaymentAlert).toHaveBeenCalledTimes(1);
     expect(prisma.alertRuleDispatchLog.create).toHaveBeenCalledWith({
       data: { paymentId: 'payment-1', matchedRuleIds: ['rule-1'] },
+    });
+    expect(prisma.outboxEvent.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({ eventType: 'payment.alert', aggregateId: 'payment-1' }),
+        expect.objectContaining({ eventType: 'payment.realtime', aggregateId: 'payment-1' }),
+      ]),
     });
     // The legacy filterRules gate must not run once AlertRule rows exist for the user.
     expect(prisma.notificationPreference.findUnique).not.toHaveBeenCalled();
@@ -503,6 +521,9 @@ describe('processPaymentRecord — persisted AlertRule evaluator', () => {
 
     expect(enqueuePaymentAlert).not.toHaveBeenCalled();
     expect(prisma.alertRuleDispatchLog.create).not.toHaveBeenCalled();
+    expect(prisma.outboxEvent.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ eventType: 'payment.realtime', aggregateId: 'payment-1' })],
+    });
   });
 
   it('respects a minimum amount threshold rule', async () => {
