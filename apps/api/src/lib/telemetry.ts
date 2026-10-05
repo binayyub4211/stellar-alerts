@@ -18,6 +18,14 @@ let initialized = false;
 export async function startTelemetry(serviceNameOverride?: string): Promise<void> {
   if (initialized) return;
 
+  // Load-test / CI fast path: creating Http + Prisma spans costs CPU on
+  // every request even with no collector listening. Opt out explicitly via
+  // OTEL_SDK_DISABLED=true (set in the k6 performance job).
+  if (process.env.OTEL_SDK_DISABLED === 'true') {
+    initialized = true;
+    return;
+  }
+
   const traceExporter = new OTLPTraceExporter({
     url: env.OTEL_EXPORTER_OTLP_ENDPOINT,
   });

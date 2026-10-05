@@ -236,14 +236,11 @@ describe('Comprehensive Validation and Authorization Tests', () => {
         const authRequest = makeAuthenticatedRequest(testServer, testUser);
 
         const invalidQueries = [
-          '?page=-1',
-          '?page=0',
-          '?pageSize=-5',
-          '?pageSize=0',
-          '?page=not-a-number',
-          '?pageSize=not-a-number',
-          '?page=1.5&pageSize=2.5',
-          '?pageSize=1000000', // Potentially too large
+          '?limit=-1',
+          '?limit=0',
+          '?limit=not-a-number',
+          '?limit=1.5',
+          '?limit=1000000', // Potentially too large
         ];
 
         for (const query of invalidQueries) {

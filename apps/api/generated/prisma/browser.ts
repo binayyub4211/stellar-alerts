@@ -103,6 +103,11 @@ export type WebhookCircuitBreaker = Prisma.WebhookCircuitBreakerModel
  */
 export type ExportJob = Prisma.ExportJobModel
 /**
+ * Model TransactionSimulation
+ * 
+ */
+export type TransactionSimulation = Prisma.TransactionSimulationModel
+/**
  * Model SorobanEventSnapshot
  * 
  */

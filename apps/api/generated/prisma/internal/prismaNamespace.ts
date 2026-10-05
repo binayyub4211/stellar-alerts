@@ -414,6 +414,7 @@ export const ModelName = {
   WebhookLog: 'WebhookLog',
   WebhookCircuitBreaker: 'WebhookCircuitBreaker',
   ExportJob: 'ExportJob',
+  TransactionSimulation: 'TransactionSimulation',
   SorobanEventSnapshot: 'SorobanEventSnapshot',
   SorobanStateAudit: 'SorobanStateAudit',
   SorobanContractSubscription: 'SorobanContractSubscription',
@@ -451,7 +452,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "wallet" | "ingestionCursor" | "payment" | "outboxEvent" | "notificationPreference" | "deliveryLog" | "paymentChecksum" | "dailyChecksumRoot" | "alertRule" | "alertRuleDispatchLog" | "telegramSyncCode" | "whatsAppDeliveryLog" | "webhook" | "webhookLog" | "webhookCircuitBreaker" | "exportJob" | "sorobanEventSnapshot" | "sorobanStateAudit" | "sorobanContractSubscription" | "sacTokenMintBurnEvent" | "sacTokenSupply" | "multisigTreasury" | "multisigSignerWatcher" | "pendingMultisigTransaction" | "anchorTransactionWatch" | "dexSwapWatch" | "sorobanTopicIndex" | "sorobanTopicIndexCursor" | "dexSwapEvent" | "securityAuditLog" | "notificationDelivery" | "notificationDeliveryAttempt" | "deadLetter" | "webhookSandboxReplay" | "deadLetterAudit" | "mfaRecoveryCode" | "refreshSession" | "refreshTokenHistory"
+    modelProps: "user" | "wallet" | "ingestionCursor" | "payment" | "outboxEvent" | "notificationPreference" | "deliveryLog" | "paymentChecksum" | "dailyChecksumRoot" | "alertRule" | "alertRuleDispatchLog" | "telegramSyncCode" | "whatsAppDeliveryLog" | "webhook" | "webhookLog" | "webhookCircuitBreaker" | "exportJob" | "transactionSimulation" | "sorobanEventSnapshot" | "sorobanStateAudit" | "sorobanContractSubscription" | "sacTokenMintBurnEvent" | "sacTokenSupply" | "multisigTreasury" | "multisigSignerWatcher" | "pendingMultisigTransaction" | "anchorTransactionWatch" | "dexSwapWatch" | "sorobanTopicIndex" | "sorobanTopicIndexCursor" | "dexSwapEvent" | "securityAuditLog" | "notificationDelivery" | "notificationDeliveryAttempt" | "deadLetter" | "webhookSandboxReplay" | "deadLetterAudit" | "mfaRecoveryCode" | "refreshSession" | "refreshTokenHistory"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1710,6 +1711,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ExportJobCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ExportJobCountAggregateOutputType> | number
+        }
+      }
+    }
+    TransactionSimulation: {
+      payload: Prisma.$TransactionSimulationPayload<ExtArgs>
+      fields: Prisma.TransactionSimulationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TransactionSimulationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TransactionSimulationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        findFirst: {
+          args: Prisma.TransactionSimulationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TransactionSimulationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        findMany: {
+          args: Prisma.TransactionSimulationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>[]
+        }
+        create: {
+          args: Prisma.TransactionSimulationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        createMany: {
+          args: Prisma.TransactionSimulationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TransactionSimulationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>[]
+        }
+        delete: {
+          args: Prisma.TransactionSimulationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        update: {
+          args: Prisma.TransactionSimulationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        deleteMany: {
+          args: Prisma.TransactionSimulationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TransactionSimulationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TransactionSimulationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>[]
+        }
+        upsert: {
+          args: Prisma.TransactionSimulationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TransactionSimulationPayload>
+        }
+        aggregate: {
+          args: Prisma.TransactionSimulationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTransactionSimulation>
+        }
+        groupBy: {
+          args: Prisma.TransactionSimulationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TransactionSimulationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TransactionSimulationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TransactionSimulationCountAggregateOutputType> | number
         }
       }
     }
@@ -3642,6 +3717,24 @@ export const ExportJobScalarFieldEnum = {
 export type ExportJobScalarFieldEnum = (typeof ExportJobScalarFieldEnum)[keyof typeof ExportJobScalarFieldEnum]
 
 
+export const TransactionSimulationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  sourceAccount: 'sourceAccount',
+  network: 'network',
+  label: 'label',
+  envelopeHash: 'envelopeHash',
+  score: 'score',
+  band: 'band',
+  blockExecution: 'blockExecution',
+  indicatorCodes: 'indicatorCodes',
+  report: 'report',
+  createdAt: 'createdAt'
+} as const
+
+export type TransactionSimulationScalarFieldEnum = (typeof TransactionSimulationScalarFieldEnum)[keyof typeof TransactionSimulationScalarFieldEnum]
+
+
 export const SorobanEventSnapshotScalarFieldEnum = {
   id: 'id',
   contractId: 'contractId',
@@ -4288,6 +4381,7 @@ export type GlobalOmitConfig = {
   webhookLog?: Prisma.WebhookLogOmit
   webhookCircuitBreaker?: Prisma.WebhookCircuitBreakerOmit
   exportJob?: Prisma.ExportJobOmit
+  transactionSimulation?: Prisma.TransactionSimulationOmit
   sorobanEventSnapshot?: Prisma.SorobanEventSnapshotOmit
   sorobanStateAudit?: Prisma.SorobanStateAuditOmit
   sorobanContractSubscription?: Prisma.SorobanContractSubscriptionOmit

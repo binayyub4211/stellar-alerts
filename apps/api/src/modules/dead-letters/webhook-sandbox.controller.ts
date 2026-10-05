@@ -28,7 +28,12 @@ export class WebhookSandboxController {
 
     try {
       const userId = (request as any).user.id;
-      const result = await webhookSandboxService.replaySandbox(params.data.id, userId, body.data.mockResponse);
+      const result = await webhookSandboxService.replaySandbox(params.data.id, userId, {
+        status: body.data.mockStatusCode,
+        body: body.data.mockResponseBody ?? '',
+        headers: body.data.mockResponseHeaders ?? {},
+        delayMs: 0,
+      });
       return reply.send({ ...result });
     } catch (error: any) {
       if (error.message.startsWith('Dead letter')) {
@@ -45,7 +50,10 @@ export class WebhookSandboxController {
     }
 
     const userId = (request as any).user.id;
-    const result = await webhookSandboxService.listReplays(userId, parsed.data);
+    const result = await webhookSandboxService.listReplays(userId, {
+      page: 1,
+      pageSize: parsed.data.limit ?? 20,
+    });
     return reply.send({ success: true, ...result });
   }
 

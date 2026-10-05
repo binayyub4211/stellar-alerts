@@ -256,7 +256,7 @@ vi.mock('../lib/stellar', () => ({
     getRecentPayments: vi.fn(),
     getPaymentsSince: vi.fn(),
     getPaymentsSinceResult: vi.fn(),
-    getLatestPagingToken: vi.fn(),
+    getLatestPagingToken: vi.fn().mockResolvedValue('100'),
   },
 }));
 

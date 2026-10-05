@@ -16,6 +16,11 @@ import {
   exportIdSchema,
   listExportsQuerySchema,
 } from './modules/exports/exports.schema';
+import {
+  analyzeSimulationSchema,
+  simulationIdSchema,
+  listSimulationsQuerySchema,
+} from './modules/simulation/simulation.schema';
 
 /**
  * The one envelope shape every thrown AppError (lib/errors.ts) is
@@ -63,6 +68,9 @@ export const openApiComponentSchemas = {
   ExportIdParams: z.toJSONSchema(exportIdSchema),
   ListExportsQuery: z.toJSONSchema(listExportsQuerySchema),
   DownloadExportQuery: z.toJSONSchema(downloadExportQuerySchema),
+  AnalyzeSimulationInput: z.toJSONSchema(analyzeSimulationSchema),
+  SimulationIdParams: z.toJSONSchema(simulationIdSchema),
+  ListSimulationsQuery: z.toJSONSchema(listSimulationsQuerySchema),
 };
 
 export const openApiOptions = {
@@ -81,6 +89,7 @@ export const openApiOptions = {
       { name: 'dead-letters', description: 'Inspection, replay and suppression of failed notification deliveries' },
       { name: 'webhook-sandbox', description: 'Sandbox replay of dead letters against a mock webhook receiver with response inspection' },
       { name: 'exports', description: 'Asynchronous CSV/PDF export jobs with progress and signed downloads' },
+      { name: 'simulations', description: 'Pre-execution transaction envelope simulation with explainable threat scoring' },
     ],
     components: {
       schemas: openApiComponentSchemas as Record<string, any>,
