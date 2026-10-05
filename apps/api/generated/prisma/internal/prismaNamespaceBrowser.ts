@@ -55,6 +55,7 @@ export const ModelName = {
   Wallet: 'Wallet',
   IngestionCursor: 'IngestionCursor',
   Payment: 'Payment',
+  OutboxEvent: 'OutboxEvent',
   NotificationPreference: 'NotificationPreference',
   DeliveryLog: 'DeliveryLog',
   PaymentChecksum: 'PaymentChecksum',
@@ -160,6 +161,24 @@ export const PaymentScalarFieldEnum = {
 } as const
 
 export type PaymentScalarFieldEnum = (typeof PaymentScalarFieldEnum)[keyof typeof PaymentScalarFieldEnum]
+
+
+export const OutboxEventScalarFieldEnum = {
+  id: 'id',
+  eventType: 'eventType',
+  aggregateId: 'aggregateId',
+  payload: 'payload',
+  status: 'status',
+  attempts: 'attempts',
+  availableAt: 'availableAt',
+  lockedAt: 'lockedAt',
+  processedAt: 'processedAt',
+  lastError: 'lastError',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
 
 
 export const NotificationPreferenceScalarFieldEnum = {
@@ -595,6 +614,12 @@ export const DeadLetterScalarFieldEnum = {
   payload: 'payload',
   error: 'error',
   status: 'status',
+  failureClass: 'failureClass',
+  failureReason: 'failureReason',
+  jobId: 'jobId',
+  attemptsMade: 'attemptsMade',
+  maxAttempts: 'maxAttempts',
+  quarantinedAt: 'quarantinedAt',
   retryCount: 'retryCount',
   failedAt: 'failedAt',
   createdAt: 'createdAt',
@@ -687,19 +712,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+
+
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

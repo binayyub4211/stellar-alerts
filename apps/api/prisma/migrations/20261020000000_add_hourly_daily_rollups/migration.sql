@@ -51,7 +51,7 @@ $$;
 -- Add a simple view that exposes failure_rate and avg_gas placeholders.
 -- These fields are left NULL until ingestion stores failure flags and
 -- gas measurements in the primary tables (see docs/DATABASE_ROLLUPS.md).
-CREATE OR REPLACE VIEW IF NOT EXISTS "payment_hourly_rollup_enriched" AS
+CREATE OR REPLACE VIEW "payment_hourly_rollup_enriched" AS
 SELECT
   phr.*,
   NULL::NUMERIC AS failure_rate,

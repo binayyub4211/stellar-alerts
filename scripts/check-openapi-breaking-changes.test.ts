@@ -350,7 +350,7 @@ describe('checkOpenApiBreakingChanges', () => {
         execFileSync(
           'npx',
           ['tsx', script, '--base-path', baseFile, '--head', headFile],
-          { encoding: 'utf8', stdio: 'pipe' }
+          { encoding: 'utf8', stdio: 'pipe', shell: true }
         );
         return 0;
       } catch (err: unknown) {

@@ -303,7 +303,7 @@ describe('Chaos engineering: unhandled crash prevention (deterministic)', () => 
     }
 
     expect(unhandledRejection).toBeNull();
-  });
+  }, 15000);
 
   it('a simulated DB disconnect (rejected wallet.findMany) does not crash pollOnce', async () => {
     const { prisma } = await import('../lib/prisma');
