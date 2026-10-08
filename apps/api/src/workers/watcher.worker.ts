@@ -208,16 +208,16 @@ export async function processPaymentRecord(
               { eventType: 'payment.realtime', aggregateId: persistedPayment.id, payload: eventPayload },
             ],
           });
-        }
-
-        let cursorGap = { hasGap: false, ledgerDelta: 0 };
-        if (pagingToken) {
-          if (options.skipGapCheck) {
-            await tx.ingestionCursor.upsert({
-              where: { walletId: wallet.id },
-              create: { walletId: wallet.id, pagingToken },
-              update: { pagingToken, ...buildCursorSuccessUpdate() },
-            });
+          isNewPayment = true;
+        } catch (err: unknown) {
+          const prismaErr = err as { code?: string };
+          if (prismaErr.code === 'P2002') {
+            // A concurrent processor (SSE stream + poll loop, or two
+            // overlapping bounded-backfill passes) inserted this payment
+            // first — reorg-like duplicate delivery, not a real error.
+            // Treat it as already recorded: don't re-alert.
+            log.info({ txHash }, '🔁 Duplicate payment insert raced and lost, skipping (already recorded)');
+            payment = await prisma.payment.findUnique({ where: { txHash } });
           } else {
             const previousPagingToken =
               options.previousPagingToken !== undefined
@@ -358,11 +358,17 @@ export async function processPaymentRecord(
         span.setAttribute('payment.enqueued', dispatched);
       }
 
-      if (gap.hasGap) {
-        log.warn({ walletId: wallet.id, ledgerDelta: gap.ledgerDelta }, '⚠️ Ledger gap detected in ingestion cursor');
-        span.setAttribute('cursor.gapDetected', true);
-        span.setAttribute('cursor.gapLedgerDelta', gap.ledgerDelta);
-        await recoverFromLedgerGap(wallet);
+      const pagingToken = getHorizonPagingToken(record);
+      if (pagingToken) {
+        const gap = await saveCursor(wallet.id, pagingToken, {
+          skipGapCheck: options.skipGapCheck,
+          previousPagingToken: options.previousPagingToken,
+        });
+        if (gap.hasGap) {
+          span.setAttribute('cursor.gapDetected', true);
+          span.setAttribute('cursor.gapLedgerDelta', gap.ledgerDelta);
+          await recoverFromLedgerGap(wallet);
+        }
       }
 
       span.setStatus({ code: SpanStatusCode.OK });
@@ -684,14 +690,11 @@ export async function startHorizonSSEStream(
             resetHeartbeat();
             attempts = 1;
             console.log(`[WatcherStream] ⚡ Live SSE stream message received: ${record.type}`);
-            await enqueueMessage(async () => {
-              await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
-              const token = getHorizonPagingToken(record);
-              if (token) {
-                lastPagingToken = token;
-              }
-              streamMetrics.messagesProcessed++;
-            });
+            await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
+            const token = getHorizonPagingToken(record);
+            if (token) {
+              lastPagingToken = token;
+            }
           },
           onerror: (error: Error | unknown) => {
             const errMsg = error instanceof Error ? error.message : String(error);
