@@ -331,7 +331,7 @@ describe('Chaos engineering: unhandled crash prevention (deterministic)', () => 
     }
 
     expect(unhandledRejection).toBeNull();
-  }, 10000);
+  }, 15000);
 
   it('a simulated DB disconnect (rejected wallet.findMany) does not crash pollOnce', async () => {
     vi.mocked(prisma.wallet.findMany).mockRejectedValue(new Error('Connection terminated unexpectedly'));

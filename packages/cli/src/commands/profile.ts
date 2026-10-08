@@ -1,516 +1,317 @@
 /**
- * Profile management commands for the Stellar Alerts CLI.
+ * Profile command group — manages named CLI profiles.
  *
- * Command tree:
- *   profile create <name>           – create a new profile
- *   profile list                    – list all profiles
- *   profile use <name>              – switch the active profile
- *   profile show [name]             – show profile details
- *   profile update <name>           – update profile settings
- *   profile remove <name>           – delete a profile
- *   profile secret set <key>        – store a secret in the vault
- *   profile secret get <key>        – retrieve a secret from the vault
- *   profile secret list             – list secret keys (not values)
- *   profile secret delete <key>     – delete a secret from the vault
+ * Subcommands:
+ *   profile add <name> [--url <apiUrl>] [--token <token>]
+ *   profile list
+ *   profile use <name>
+ *   profile show [name]
+ *   profile edit <name> --url <apiUrl>
+ *   profile remove <name>
+ *   profile whoami
  */
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { createInterface } from 'node:readline';
 import {
-  createProfileStore,
   createProfile,
-  listProfiles,
-  getProfile,
-  getActiveProfileName,
+  deleteProfile,
   getActiveProfile,
+  getActiveProfileName,
+  getProfile,
+  listProfiles,
   setActiveProfile,
   updateProfile,
-  removeProfile,
-  setSecret,
-  getSecret,
-  listSecretKeys,
-  deleteSecret,
-} from '../lib/profile-store.js';
-import { ProfileError, ProfileConfig } from '../lib/profile-types.js';
-
-// ---------------------------------------------------------------------------
-// Secure password prompt (no echo)
-// ---------------------------------------------------------------------------
-
-/**
- * Prompts the user for a password without echoing it to the terminal.
- * Falls back to visible input if stdin is not a TTY (CI / piped usage).
- */
-async function promptPassword(promptText: string): Promise<string> {
-  return new Promise((resolve) => {
-    if (!process.stdin.isTTY) {
-      // Non-interactive: read one line without suppression
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
-      rl.question(promptText, (answer) => {
-        rl.close();
-        resolve(answer);
-      });
-      return;
-    }
-
-    // Interactive: suppress echo via raw mode
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      terminal: true,
-    });
-
-    process.stdout.write(promptText);
-
-    // Disable echo
-    (process.stdin as any).setRawMode?.(true);
-    process.stdin.resume();
-
-    let password = '';
-
-    const onData = (char: Buffer) => {
-      const c = char.toString();
-      if (c === '\r' || c === '\n') {
-        process.stdout.write('\n');
-        cleanup();
-        resolve(password);
-      } else if (c === '\u0003') {
-        // Ctrl+C
-        process.stdout.write('\n');
-        cleanup();
-        process.exit(1);
-      } else if (c === '\u007f' || c === '\b') {
-        // Backspace
-        if (password.length > 0) {
-          password = password.slice(0, -1);
-        }
-      } else {
-        password += c;
-      }
-    };
-
-    const cleanup = () => {
-      (process.stdin as any).setRawMode?.(false);
-      process.stdin.pause();
-      process.stdin.removeListener('data', onData);
-      rl.close();
-    };
-
-    process.stdin.on('data', onData);
-  });
-}
-
-async function promptPasswordConfirm(promptText: string): Promise<string> {
-  const password = await promptPassword(promptText);
-  const confirm = await promptPassword('Confirm vault password: ');
-
-  if (password !== confirm) {
-    console.error(chalk.red('❌ Passwords do not match. Please try again.'));
-    process.exit(1);
-  }
-
-  return password;
-}
-
-// ---------------------------------------------------------------------------
-// Display helpers
-// ---------------------------------------------------------------------------
-
-function formatProfileRow(profile: ProfileConfig, isActive: boolean): string {
-  const activeMarker = isActive ? chalk.green('●') : chalk.gray('○');
-  const name = isActive ? chalk.bold.green(profile.name) : chalk.cyan(profile.name);
-  const network = chalk.gray(profile.network ?? '—');
-  const url = profile.apiUrl;
-  const secrets = profile.hasSecrets ? chalk.yellow('🔒 yes') : chalk.gray('—');
-  const updated = chalk.gray(new Date(profile.updatedAt).toLocaleDateString());
-  return `${activeMarker}  ${name.padEnd(24)}${network.padEnd(12)}${url.padEnd(36)}${secrets.padEnd(12)}${updated}`;
-}
-
-function printProfilesTable(profiles: ProfileConfig[], activeName: string | null): void {
-  const header =
-    '   ' +
-    chalk.bold('Name'.padEnd(24)) +
-    chalk.bold('Network'.padEnd(12)) +
-    chalk.bold('API URL'.padEnd(36)) +
-    chalk.bold('Secrets'.padEnd(12)) +
-    chalk.bold('Updated');
-
-  console.log(chalk.gray('─'.repeat(100)));
-  console.log(header);
-  console.log(chalk.gray('─'.repeat(100)));
-
-  for (const profile of profiles) {
-    console.log(formatProfileRow(profile, profile.name === activeName));
-  }
-
-  console.log(chalk.gray('─'.repeat(100)));
-}
-
-function printProfileDetail(profile: ProfileConfig, isActive: boolean): void {
-  const activeLabel = isActive ? chalk.green(' (active)') : '';
-  console.log('');
-  console.log(chalk.bold.blue(`📋 Profile: ${profile.name}${activeLabel}`));
-  console.log(chalk.gray('─'.repeat(50)));
-  console.log(`  Network:    ${chalk.cyan(profile.network ?? '—')}`);
-  console.log(`  API URL:    ${chalk.cyan(profile.apiUrl)}`);
-  console.log(`  Log Level:  ${chalk.cyan(profile.logLevel ?? 'info')}`);
-  console.log(`  Secrets:    ${profile.hasSecrets ? chalk.yellow('🔒 stored in vault') : chalk.gray('none')}`);
-  console.log(`  Created:    ${chalk.gray(profile.createdAt)}`);
-  console.log(`  Updated:    ${chalk.gray(profile.updatedAt)}`);
-  console.log('');
-}
-
-// ---------------------------------------------------------------------------
-// Error handler
-// ---------------------------------------------------------------------------
-
-function handleProfileError(error: unknown): never {
-  if (error instanceof ProfileError) {
-    console.error(chalk.red(`❌ ${error.message}`));
-
-    // Contextual hints
-    switch (error.code) {
-      case 'VAULT_WRONG_PASSWORD':
-        console.error(chalk.yellow('   Tip: Check your vault password and try again.'));
-        break;
-      case 'VAULT_NOT_FOUND':
-        console.error(chalk.yellow("   Tip: Set a secret first with: profile secret set <key>"));
-        break;
-      case 'VAULT_UNSUPPORTED_VERSION':
-        console.error(chalk.yellow('   Tip: Upgrade the Stellar Alerts CLI.'));
-        break;
-      case 'NO_ACTIVE_PROFILE':
-        console.error(chalk.yellow('   Tip: Create a profile with: profile create <name>'));
-        break;
-    }
-  } else {
-    console.error(chalk.red(`❌ Unexpected error: ${(error as Error).message}`));
-  }
-  process.exit(1);
-}
-
-// ---------------------------------------------------------------------------
-// Command registration
-// ---------------------------------------------------------------------------
+} from '../lib/profileManager.js';
+import { deleteToken, redactToken, setToken, getToken as getTokenForProfile } from '../lib/credentialStore.js';
+import { getCliConfig } from '../lib/config.js';
 
 export function registerProfileCommands(program: Command): void {
-  const profileCmd = program
+  const profile = program
     .command('profile')
-    .description('Manage CLI configuration profiles');
+    .description('Manage named CLI profiles (credentials and API URLs)');
 
-  // ── profile create ────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('create <name>')
-    .description('Create a new configuration profile')
-    .option('-u, --api-url <url>', 'API base URL for this profile', 'http://localhost:3001')
+  // -------------------------------------------------------------------------
+  // profile add
+  // -------------------------------------------------------------------------
+  profile
+    .command('add')
+    .description('Create a new profile')
+    .argument('<name>', 'Profile name (letters, digits, hyphens, underscores)')
     .option(
-      '-n, --network <network>',
-      'Network label (testnet, mainnet, staging, or custom)',
-      'testnet',
+      '-u, --url <apiUrl>',
+      'API base URL for this profile',
+      getCliConfig().STELLAR_ALERTS_API_URL
     )
-    .option(
-      '--log-level <level>',
-      'Log level (debug, info, warn, error)',
-      'info',
-    )
+    .option('-t, --token <token>', 'API token to store for this profile')
     .action(
       async (
         name: string,
-        options: { apiUrl: string; network: string; logLevel: string },
+        options: { url: string; token?: string }
       ) => {
         try {
-          const store = createProfileStore();
-          const profile = createProfile(store, name, {
-            apiUrl: options.apiUrl,
-            network: options.network,
-            logLevel: options.logLevel as ProfileConfig['logLevel'],
-          });
+          const created = createProfile(name, options.url);
+          console.log(chalk.green(`✅ Profile "${chalk.cyan(created.name)}" created.`));
+          console.log(`   API URL : ${chalk.cyan(created.apiUrl)}`);
 
-          console.log(chalk.green(`✅ Profile '${chalk.bold(profile.name)}' created successfully!`));
-          printProfileDetail(profile, profile.name === getActiveProfileName(store));
-        } catch (err) {
-          handleProfileError(err);
-        }
-      },
-    );
-
-  // ── profile list ──────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('list')
-    .alias('ls')
-    .description('List all configuration profiles')
-    .action(async () => {
-      try {
-        const store = createProfileStore();
-        const profiles = listProfiles(store);
-
-        if (profiles.length === 0) {
-          console.log(
-            chalk.yellow('📭 No profiles found. Create one with: stellar-alerts-cli profile create <name>'),
-          );
-          return;
-        }
-
-        const activeName = getActiveProfileName(store);
-        console.log(chalk.blue(`\n🗂  Configuration Profiles (${profiles.length})\n`));
-        printProfilesTable(profiles, activeName);
-        console.log('');
-      } catch (err) {
-        handleProfileError(err);
-      }
-    });
-
-  // ── profile use ───────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('use <name>')
-    .description('Switch the active profile')
-    .action(async (name: string) => {
-      try {
-        const store = createProfileStore();
-        setActiveProfile(store, name);
-        console.log(chalk.green(`✅ Switched to profile '${chalk.bold(name)}'.`));
-      } catch (err) {
-        handleProfileError(err);
-      }
-    });
-
-  // ── profile show ──────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('show [name]')
-    .description('Show profile details (defaults to active profile)')
-    .action(async (name?: string) => {
-      try {
-        const store = createProfileStore();
-        let profile: ProfileConfig;
-
-        if (name) {
-          profile = getProfile(store, name);
-        } else {
-          profile = getActiveProfile(store);
-        }
-
-        const activeName = getActiveProfileName(store);
-        printProfileDetail(profile, profile.name === activeName);
-      } catch (err) {
-        handleProfileError(err);
-      }
-    });
-
-  // ── profile update ────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('update <name>')
-    .description('Update a profile\'s non-sensitive settings')
-    .option('-u, --api-url <url>', 'New API base URL')
-    .option('-n, --network <network>', 'New network label')
-    .option('--log-level <level>', 'New log level (debug, info, warn, error)')
-    .action(
-      async (
-        name: string,
-        options: { apiUrl?: string; network?: string; logLevel?: string },
-      ) => {
-        try {
-          const store = createProfileStore();
-
-          const updates: Partial<Omit<ProfileConfig, 'name' | 'createdAt' | 'updatedAt' | 'hasSecrets'>> = {};
-          if (options.apiUrl !== undefined) updates.apiUrl = options.apiUrl;
-          if (options.network !== undefined) updates.network = options.network;
-          if (options.logLevel !== undefined) {
-            updates.logLevel = options.logLevel as ProfileConfig['logLevel'];
+          if (options.token) {
+            setToken(name, options.token);
+            console.log(
+              `   Token   : ${chalk.cyan(redactToken(options.token))} (stored securely)`
+            );
+          } else {
+            console.log(
+              chalk.yellow(
+                `   ℹ️  No token stored yet. Run: stellar-alerts-cli profile token set ${name} <token>`
+              )
+            );
           }
 
-          if (Object.keys(updates).length === 0) {
-            console.log(chalk.yellow('⚠️  No fields to update. Use --api-url, --network, or --log-level.'));
-            return;
+          const active = getActiveProfileName();
+          if (active === name) {
+            console.log(chalk.gray(`   (auto-activated as this is the first profile)`));
           }
-
-          const updated = updateProfile(store, name, updates);
-          console.log(chalk.green(`✅ Profile '${chalk.bold(name)}' updated.`));
-          printProfileDetail(updated, name === getActiveProfileName(store));
         } catch (err) {
-          handleProfileError(err);
-        }
-      },
-    );
-
-  // ── profile remove ────────────────────────────────────────────────────────
-
-  profileCmd
-    .command('remove <name>')
-    .alias('rm')
-    .description('Delete a profile (and its vault secrets if password is supplied)')
-    .option('-p, --password <password>', 'Vault password to also remove stored secrets')
-    .action(async (name: string, options: { password?: string }) => {
-      try {
-        const store = createProfileStore();
-        let vaultPassword = options.password;
-
-        // If profile has secrets and no password was supplied, prompt interactively
-        let profile: ProfileConfig | null = null;
-        try {
-          profile = getProfile(store, name);
-        } catch {
-          // will throw again inside removeProfile — let it propagate
-        }
-
-        if (profile?.hasSecrets && !vaultPassword && process.stdin.isTTY) {
-          console.log(
-            chalk.yellow(
-              `⚠️  Profile '${name}' has vault secrets. Enter the vault password to remove them,\n` +
-              `   or press Enter to skip (secrets will remain in vault).`,
-            ),
-          );
-          const entered = await promptPassword('Vault password (optional): ');
-          if (entered) vaultPassword = entered;
-        }
-
-        await removeProfile(store, name, vaultPassword);
-        console.log(chalk.green(`✅ Profile '${chalk.bold(name)}' removed.`));
-      } catch (err) {
-        handleProfileError(err);
-      }
-    });
-
-  // ── profile secret ────────────────────────────────────────────────────────
-
-  const secretCmd = profileCmd
-    .command('secret')
-    .description('Manage secrets stored in the encrypted vault');
-
-  // profile secret set <key>
-  secretCmd
-    .command('set <key>')
-    .description('Store a secret value in the encrypted vault')
-    .option(
-      '--profile-name <profileName>',
-      'Profile to store the secret for (defaults to active profile)',
-    )
-    .option('--value <value>', 'Secret value (if not provided, will prompt securely)')
-    .action(async (key: string, options: { profileName?: string; value?: string }) => {
-      try {
-        const store = createProfileStore();
-        const profileName =
-          options.profileName ?? getActiveProfile(store).name;
-
-        // Verify profile exists
-        getProfile(store, profileName);
-
-        const value =
-          options.value ?? (await promptPassword(`Secret value for '${key}': `));
-
-        if (!value) {
-          console.error(chalk.red('❌ Secret value cannot be empty.'));
+          console.error(chalk.red(`❌ ${(err as Error).message}`));
           process.exit(1);
         }
+      }
+    );
 
-        const password = await promptPasswordConfirm('Vault password: ');
+  // -------------------------------------------------------------------------
+  // profile list
+  // -------------------------------------------------------------------------
+  profile
+    .command('list')
+    .alias('ls')
+    .description('List all profiles')
+    .action(() => {
+      const profiles = listProfiles();
+      const activeName = getActiveProfileName();
 
-        await setSecret(store, profileName, key, value, password);
+      if (profiles.length === 0) {
         console.log(
-          chalk.green(`✅ Secret '${chalk.bold(key)}' stored for profile '${chalk.bold(profileName)}'.`),
+          chalk.yellow(
+            '📭 No profiles found. Create one with: stellar-alerts-cli profile add <name>'
+          )
         );
-      } catch (err) {
-        handleProfileError(err);
+        return;
+      }
+
+      console.log(chalk.blue(`\n👤 CLI Profiles (${profiles.length})\n`));
+      console.log(chalk.gray('─'.repeat(80)));
+      console.log(
+        chalk.bold(
+          '  ' +
+            'Name'.padEnd(24) +
+            'API URL'.padEnd(42) +
+            'Created'
+        )
+      );
+      console.log(chalk.gray('─'.repeat(80)));
+
+      for (const p of profiles) {
+        const isActive = p.name === activeName;
+        const marker = isActive ? chalk.green('▶ ') : '  ';
+        const name = isActive ? chalk.green(p.name.padEnd(24)) : p.name.padEnd(24);
+        console.log(
+          `${marker}${name}${p.apiUrl.padEnd(42)}${chalk.gray(
+            new Date(p.createdAt).toLocaleDateString()
+          )}`
+        );
+      }
+
+      console.log(chalk.gray('─'.repeat(80)));
+      if (activeName) {
+        console.log(chalk.gray(`\nActive profile: ${chalk.green(activeName)}\n`));
       }
     });
 
-  // profile secret get <key>
-  secretCmd
-    .command('get <key>')
-    .description('Retrieve a secret value from the encrypted vault')
-    .option(
-      '--profile-name <profileName>',
-      'Profile to retrieve the secret for (defaults to active profile)',
-    )
-    .action(async (key: string, options: { profileName?: string }) => {
+  // -------------------------------------------------------------------------
+  // profile use
+  // -------------------------------------------------------------------------
+  profile
+    .command('use')
+    .description('Switch to a profile (make it active)')
+    .argument('<name>', 'Profile name to activate')
+    .action((name: string) => {
       try {
-        const store = createProfileStore();
-        const profileName =
-          options.profileName ?? getActiveProfile(store).name;
+        setActiveProfile(name);
+        console.log(chalk.green(`✅ Switched to profile "${chalk.cyan(name)}".`));
+      } catch (err) {
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
 
-        getProfile(store, profileName);
-
-        const password = await promptPassword('Vault password: ');
-        const value = await getSecret(store, profileName, key, password);
-
-        if (value === undefined) {
-          console.log(chalk.yellow(`⚠️  No secret '${key}' found for profile '${profileName}'.`));
+  // -------------------------------------------------------------------------
+  // profile show
+  // -------------------------------------------------------------------------
+  profile
+    .command('show')
+    .description('Show details of a profile (defaults to active profile)')
+    .argument('[name]', 'Profile name (defaults to active)')
+    .action((name?: string) => {
+      try {
+        const target = name ? getProfile(name) : getActiveProfile();
+        if (!target) {
+          const hint = name
+            ? `Profile "${name}" does not exist.`
+            : 'No active profile. Create one with: stellar-alerts-cli profile add <name>';
+          console.error(chalk.red(`❌ ${hint}`));
           process.exit(1);
         }
 
-        // Print to stdout so it can be piped safely
-        process.stdout.write(value + '\n');
-      } catch (err) {
-        handleProfileError(err);
-      }
-    });
+        const activeName = getActiveProfileName();
+        const isActive = target.name === activeName;
 
-  // profile secret list
-  secretCmd
-    .command('list')
-    .alias('ls')
-    .description('List secret keys stored in the vault (values are NOT shown)')
-    .option(
-      '--profile-name <profileName>',
-      'Profile to list secrets for (defaults to active profile)',
-    )
-    .action(async (options: { profileName?: string }) => {
-      try {
-        const store = createProfileStore();
-        const profileName =
-          options.profileName ?? getActiveProfile(store).name;
-
-        getProfile(store, profileName);
-
-        const password = await promptPassword('Vault password: ');
-        const keys = await listSecretKeys(store, profileName, password);
-
-        if (keys.length === 0) {
-          console.log(chalk.yellow(`📭 No secrets stored for profile '${profileName}'.`));
-          return;
-        }
-
-        console.log(chalk.blue(`\n🔒 Secrets for profile '${chalk.bold(profileName)}'\n`));
-        for (const k of keys) {
-          console.log(`  ${chalk.cyan('•')} ${k}`);
-        }
+        console.log(chalk.blue(`\n👤 Profile: ${chalk.bold(target.name)}\n`));
+        console.log(`  Active  : ${isActive ? chalk.green('yes') : chalk.gray('no')}`);
+        console.log(`  API URL : ${chalk.cyan(target.apiUrl)}`);
+        console.log(`  Created : ${chalk.gray(new Date(target.createdAt).toISOString())}`);
         console.log('');
       } catch (err) {
-        handleProfileError(err);
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
       }
     });
 
-  // profile secret delete <key>
-  secretCmd
-    .command('delete <key>')
-    .alias('rm')
-    .description('Delete a secret from the encrypted vault')
-    .option(
-      '--profile-name <profileName>',
-      'Profile to delete the secret from (defaults to active profile)',
-    )
-    .action(async (key: string, options: { profileName?: string }) => {
+  // -------------------------------------------------------------------------
+  // profile edit
+  // -------------------------------------------------------------------------
+  profile
+    .command('edit')
+    .description('Update the API URL of an existing profile')
+    .argument('<name>', 'Profile name to update')
+    .requiredOption('-u, --url <apiUrl>', 'New API base URL')
+    .action((name: string, options: { url: string }) => {
       try {
-        const store = createProfileStore();
-        const profileName =
-          options.profileName ?? getActiveProfile(store).name;
+        const updated = updateProfile(name, options.url);
+        console.log(chalk.green(`✅ Profile "${chalk.cyan(updated.name)}" updated.`));
+        console.log(`   API URL : ${chalk.cyan(updated.apiUrl)}`);
+      } catch (err) {
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
 
-        getProfile(store, profileName);
-
-        const password = await promptPassword('Vault password: ');
-        await deleteSecret(store, profileName, key, password);
+  // -------------------------------------------------------------------------
+  // profile remove
+  // -------------------------------------------------------------------------
+  profile
+    .command('remove')
+    .alias('rm')
+    .description('Delete a profile and its stored token')
+    .argument('<name>', 'Profile name to delete')
+    .action((name: string) => {
+      try {
+        deleteProfile(name);
         console.log(
           chalk.green(
-            `✅ Secret '${chalk.bold(key)}' deleted from profile '${chalk.bold(profileName)}'.`,
-          ),
+            `✅ Profile "${chalk.cyan(name)}" and its stored token have been deleted.`
+          )
+        );
+        const newActive = getActiveProfileName();
+        if (newActive) {
+          console.log(chalk.gray(`   Active profile is now "${newActive}".`));
+        } else {
+          console.log(
+            chalk.yellow(
+              '   ⚠️  No active profile. Create one with: stellar-alerts-cli profile add <name>'
+            )
+          );
+        }
+      } catch (err) {
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
+
+  // -------------------------------------------------------------------------
+  // profile whoami  — quick diagnostic
+  // -------------------------------------------------------------------------
+  profile
+    .command('whoami')
+    .description('Show the currently active profile and redacted token')
+    .action(() => {
+      const active = getActiveProfile();
+      if (!active) {
+        console.log(
+          chalk.yellow(
+            '⚠️  No active profile. Create one with: stellar-alerts-cli profile add <name>'
+          )
+        );
+        return;
+      }
+
+      const token = getTokenForProfile(active.name);
+      const envToken = process.env.STELLAR_ALERTS_API_KEY;
+
+      console.log(chalk.blue('\n🔑 Active Profile\n'));
+      console.log(`  Name    : ${chalk.cyan(active.name)}`);
+      console.log(`  API URL : ${chalk.cyan(active.apiUrl)}`);
+
+      if (token) {
+        console.log(`  Token   : ${chalk.cyan(redactToken(token))} ${chalk.gray('(from profile store)')}`);
+      } else if (envToken) {
+        console.log(
+          `  Token   : ${chalk.cyan(redactToken(envToken))} ${chalk.gray('(from STELLAR_ALERTS_API_KEY env var)')}`
+        );
+      } else {
+        console.log(
+          `  Token   : ${chalk.yellow('none')} ${chalk.gray('(run: profile token set <name> <token>)')}`
+        );
+      }
+      console.log('');
+    });
+
+  // -------------------------------------------------------------------------
+  // profile token  — sub-group for token management
+  // -------------------------------------------------------------------------
+  const token = profile
+    .command('token')
+    .description('Manage stored tokens for profiles');
+
+  token
+    .command('set')
+    .description('Store (or replace) the token for a profile')
+    .argument('<name>', 'Profile name')
+    .argument('<token>', 'API token value')
+    .action((name: string, tokenValue: string) => {
+      try {
+        if (!getProfile(name)) {
+          console.error(chalk.red(`❌ Profile "${name}" does not exist.`));
+          process.exit(1);
+        }
+        setToken(name, tokenValue);
+        console.log(
+          chalk.green(
+            `✅ Token for profile "${chalk.cyan(name)}" stored: ${chalk.cyan(redactToken(tokenValue))}`
+          )
         );
       } catch (err) {
-        handleProfileError(err);
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
+      }
+    });
+
+  token
+    .command('unset')
+    .description('Remove the stored token for a profile')
+    .argument('<name>', 'Profile name')
+    .action((name: string) => {
+      try {
+        if (!getProfile(name)) {
+          console.error(chalk.red(`❌ Profile "${name}" does not exist.`));
+          process.exit(1);
+        }
+        deleteToken(name);
+        console.log(
+          chalk.green(`✅ Token for profile "${chalk.cyan(name)}" removed.`)
+        );
+      } catch (err) {
+        console.error(chalk.red(`❌ ${(err as Error).message}`));
+        process.exit(1);
       }
     });
 }

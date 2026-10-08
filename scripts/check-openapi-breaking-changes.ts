@@ -538,6 +538,97 @@ function buildReport(parts: {
 }
 
 /**
+ * Recursively converts OpenAPI 3.1 / JSON Schema Draft-07 constructs (such as `propertyNames`
+ * and `{ anyOf: [..., { type: 'null' }] }` or `type: 'null'`) into OpenAPI 3.0-compatible
+ * forms so `openapi-diff`'s OpenAPI 3.0 schema validator doesn't reject valid specs.
+ */
+export function sanitizeSpecForDiff(spec: unknown): unknown {
+  if (spec === null || typeof spec !== 'object') {
+    return spec;
+  }
+  if (Array.isArray(spec)) {
+    return spec.map(sanitizeSpecForDiff);
+  }
+
+  const obj = spec as Record<string, unknown>;
+
+  // Check for anyOf / oneOf containing { type: 'null' }
+  for (const unionKey of ['anyOf', 'oneOf'] as const) {
+    if (Array.isArray(obj[unionKey])) {
+      const union = obj[unionKey] as unknown[];
+      const hasNull = union.some(
+        (s) => s && typeof s === 'object' && (s as Record<string, unknown>).type === 'null'
+      );
+      if (hasNull) {
+        const nonNulls = union.filter(
+          (s) => !s || typeof s !== 'object' || (s as Record<string, unknown>).type !== 'null'
+        );
+        const rest: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj)) {
+          if (k !== unionKey && k !== 'propertyNames') {
+            rest[k] = sanitizeSpecForDiff(v);
+          }
+        }
+        if (nonNulls.length === 1 && nonNulls[0] && typeof nonNulls[0] === 'object') {
+          const unwrapped = sanitizeSpecForDiff(nonNulls[0]) as Record<string, unknown>;
+          return {
+            ...rest,
+            ...unwrapped,
+            nullable: true,
+          };
+        } else {
+          return {
+            ...rest,
+            [unionKey]: nonNulls.map(sanitizeSpecForDiff),
+            nullable: true,
+          };
+        }
+      }
+    }
+  }
+
+  // Handle type: 'null'
+  if (obj.type === 'null') {
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k !== 'type' && k !== 'propertyNames') {
+        rest[k] = sanitizeSpecForDiff(v);
+      }
+    }
+    return {
+      ...rest,
+      nullable: true,
+    };
+  }
+
+  // Handle type: ['string', 'null']
+  if (Array.isArray(obj.type)) {
+    const types = obj.type.filter((t) => t !== 'null');
+    const nullable = obj.type.includes('null');
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k !== 'type' && k !== 'propertyNames') {
+        rest[k] = sanitizeSpecForDiff(v);
+      }
+    }
+    return {
+      ...rest,
+      type: types.length === 1 ? types[0] : types,
+      ...(nullable ? { nullable: true } : {}),
+    };
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'propertyNames') {
+      continue;
+    }
+    result[key] = sanitizeSpecForDiff(value);
+  }
+  return result;
+}
+
+/**
  * Diffs the head spec against the base spec and returns a structured result
  * plus a human-readable report. Never throws for "breaking changes found" —
  * that is a normal outcome surfaced via `result.breaking`; it only throws for
@@ -615,12 +706,12 @@ export async function checkOpenApiBreakingChanges(
   try {
     outcome = (await openApiDiff.diffSpecs({
       sourceSpec: {
-        content: JSON.stringify(baseSpecForDiff),
+        content: JSON.stringify(sanitizeSpecForDiff(baseSpec)),
         location: 'base',
         format: 'openapi3',
       },
       destinationSpec: {
-        content: JSON.stringify(headSpecForDiff),
+        content: JSON.stringify(sanitizeSpecForDiff(headSpec)),
         location: 'head',
         format: 'openapi3',
       },

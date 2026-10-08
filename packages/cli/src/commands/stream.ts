@@ -3,34 +3,6 @@ import chalk from 'chalk';
 import { ApiClient } from '../lib/api.js';
 import { PaymentDTO } from '../lib/types.js';
 import { resolveAuth } from '../lib/auth.js';
-import { CursorStore, defaultCursorFile } from '../lib/cursor-store.js';
-import { runResilientStream } from '../lib/resilient-stream.js';
-
-interface WatchOptions {
-  wallet?: string;
-  token?: string;
-  color?: boolean;
-  cursor?: string;
-  cursorFile?: string;
-  resume?: boolean;
-  maxRetries?: string;
-  maxBackoff?: string;
-}
-
-function warn(message: string): void {
-  console.warn(chalk.yellow(`⚠  ${message}`));
-}
-
-/** Returns undefined when unset, null (after reporting) when invalid. */
-function parseNonNegativeInt(value: string | undefined, flag: string): number | undefined | null {
-  if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    console.error(chalk.red(`❌ ${flag} must be a non-negative integer, got "${value}"`));
-    return null;
-  }
-  return parsed;
-}
 
 function formatPayment(payment: PaymentDTO): string {
   const time = new Date(payment.receivedAt).toLocaleTimeString();
@@ -69,27 +41,10 @@ export function registerStreamCommands(program: Command): void {
     .option('-w, --wallet <walletId>', 'Filter by specific wallet ID')
     .option('-t, --token <token>', 'API authentication token (overrides profile)')
     .option('--no-color', 'Disable colored output')
-    .option('--cursor <token>', 'Resume after this cursor ("now" = live tail, ignore saved cursor)')
-    .option('--cursor-file <path>', 'Where the resume cursor is stored (default: ~/.stellar-alerts/stream-cursor[-<wallet>].json)')
-    .option('--no-resume', 'Do not read or write the saved cursor')
-    .option('--max-retries <number>', 'Consecutive reconnect attempts before giving up (default: unlimited)')
-    .option('--max-backoff <ms>', 'Upper bound for the reconnect delay in milliseconds', '60000')
-    .action(async (options: WatchOptions) => {
-      const abortController = new AbortController();
-      const onSigInt = () => {
-        if (abortController.signal.aborted) {
-          // Second signal: the user wants out now.
-          process.exit(130);
-        }
-        abortController.abort();
-      };
-      const onSigTerm = () => {
-        if (abortController.signal.aborted) {
-          // Second signal: the user wants out now.
-          process.exit(130);
-        }
-        abortController.abort();
-      };
+    .action(async (options: { wallet?: string; token?: string; color?: boolean }) => {
+      try {
+        const auth = resolveAuth(options.token, program.opts().apiUrl);
+        const client = new ApiClient(auth.apiUrl, auth.token);
 
       process.on('SIGINT', onSigInt);
       process.on('SIGTERM', onSigTerm);
@@ -113,10 +68,9 @@ export function registerStreamCommands(program: Command): void {
         printHeader();
         console.log(chalk.gray('Connecting to payment stream...'));
 
-        const result = await runResilientStream({
-          connect: (cursor, signal) =>
-            client.openPaymentStream({ cursor: cursor || undefined, walletId: options.wallet, signal }),
-          onPayment: (payment: PaymentDTO) => {
+        await client.streamPayments(
+          (payment: PaymentDTO) => {
+            paymentCount++;
             console.log(formatPayment(payment));
           },
           signal: abortController.signal,

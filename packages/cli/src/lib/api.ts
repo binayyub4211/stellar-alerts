@@ -27,15 +27,6 @@ export class ApiClient {
     return new ApiClient(url, this.apiKey);
   }
 
-  /**
-   * Updates the base URL and API key used by this client instance.
-   * Called when a --profile flag overrides the environment configuration.
-   */
-  configure(baseUrl: string, apiKey?: string): void {
-    this.baseUrl = baseUrl;
-    this.apiKey = apiKey;
-  }
-
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

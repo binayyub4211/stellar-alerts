@@ -5,8 +5,6 @@ import chalk from 'chalk';
 import { registerWalletCommands } from './commands/wallet.js';
 import { registerStreamCommands } from './commands/stream.js';
 import { registerProfileCommands } from './commands/profile.js';
-import { registerVerifyLedgerCommands } from './commands/verify-ledger.js';
-import { registerTxSignCommands } from './commands/tx-sign.js';
 
 const program = new Command();
 
@@ -24,8 +22,6 @@ program
 registerWalletCommands(program);
 registerStreamCommands(program);
 registerProfileCommands(program);
-registerVerifyLedgerCommands(program);
-registerTxSignCommands(program);
 
 // Health check command
 program
