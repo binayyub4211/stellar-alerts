@@ -46,20 +46,26 @@ export function registerStreamCommands(program: Command): void {
         const auth = resolveAuth(options.token, program.opts().apiUrl);
         const client = new ApiClient(auth.apiUrl, auth.token);
 
+      process.on('SIGINT', onSigInt);
+      process.on('SIGTERM', onSigTerm);
+
+      try {
+        const auth = resolveAuth(options.token, program.opts().apiUrl);
+        const client = new ApiClient(auth.apiUrl, auth.token);
+
+        const maxRetries = parseNonNegativeInt(options.maxRetries, '--max-retries');
+        const maxDelayMs = parseNonNegativeInt(options.maxBackoff, '--max-backoff');
+        if (maxRetries === null || maxDelayMs === null) {
+          process.exitCode = 1;
+          return;
+        }
+
+        const store = options.resume === false
+          ? undefined
+          : new CursorStore(options.cursorFile ?? defaultCursorFile(options.wallet), warn);
+        const initialCursor = options.cursor === undefined ? undefined : options.cursor === 'now' ? '' : options.cursor;
+
         printHeader();
-
-        let paymentCount = 0;
-
-        const abortController = new AbortController();
-
-        // Handle graceful shutdown
-        process.on('SIGINT', () => {
-          console.log(chalk.yellow('\n\n⏹  Stream stopped.'));
-          console.log(chalk.gray(`Total payments received: ${paymentCount}`));
-          abortController.abort();
-          process.exit(0);
-        });
-
         console.log(chalk.gray('Connecting to payment stream...'));
 
         await client.streamPayments(
@@ -67,15 +73,33 @@ export function registerStreamCommands(program: Command): void {
             paymentCount++;
             console.log(formatPayment(payment));
           },
-          abortController.signal
-        );
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') {
-          console.log(chalk.yellow('\n⏹  Stream disconnected.'));
-        } else {
-          console.error(chalk.red(`\n❌ Error: ${(error as Error).message}`));
-          process.exit(1);
+          signal: abortController.signal,
+          store,
+          initialCursor,
+          maxRetries: maxRetries ?? Infinity,
+          maxDelayMs: maxDelayMs ?? undefined,
+          onConnected: (cursor) => {
+            console.log(chalk.gray(cursor ? `Connected (resuming after ${cursor}).` : 'Connected (live).'));
+          },
+          onReconnect: ({ attempt, delayMs, error }) => {
+            console.log(
+              chalk.yellow(`⚠  Stream interrupted (${(error as Error)?.message ?? error}); reconnecting in ${(delayMs / 1000).toFixed(1)}s [attempt ${attempt}]`)
+            );
+          },
+          onWarning: warn,
+        });
+
+        console.log(chalk.yellow('\n⏹  Stream stopped.'));
+        console.log(chalk.gray(`Total payments received: ${result.received}`));
+        if (result.suppressed > 0) {
+          console.log(chalk.gray(`Duplicates suppressed: ${result.suppressed}`));
         }
+      } catch (error) {
+        console.error(chalk.red(`\n❌ Error: ${(error as Error).message}`));
+        process.exitCode = 1;
+      } finally {
+        process.off('SIGINT', onSigInt);
+        process.off('SIGTERM', onSigTerm);
       }
     });
 
