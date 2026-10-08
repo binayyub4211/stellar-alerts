@@ -352,22 +352,17 @@ export class MultiNodeHorizonClient {
     for (let i = 0; i < this.servers.length; i++) {
       const server = this.servers[i];
       try {
-        const payments = await withDeadline(
-          () =>
-            server
-              .payments()
-              .forAccount(publicKey)
-              .cursor(cursor)
-              .order('asc')
-              .limit(limit)
-              .call(),
-          timeoutMs,
-          options.signal,
-          `Horizon node ${this.endpoints[i]}`,
-        );
-        return { records: payments.records, allNodesFailed: false, lastError: null };
-      } catch (error: any) {
-        lastError = error?.message || String(error);
+        const payments = await server
+          .payments()
+          .forAccount(publicKey)
+          .cursor(cursor)
+          .order('asc')
+          .limit(limit)
+          .call();
+        return { records: asHorizonOperationRecords(payments.records), allNodesFailed: false, lastError: null };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        lastError = errMsg;
         console.warn(
           `[MultiNodeHorizon] Horizon node ${this.endpoints[i]} failed: ${lastError}. Trying fallback node...`,
         );
@@ -561,21 +556,14 @@ export const stellar = {
 
     const timeoutMs = options.timeoutMs ?? env.HORIZON_REQUEST_TIMEOUT_MS;
     try {
-      const payments = await withDeadline(
-        () =>
-          server
-            .payments()
-            .forAccount(publicKey)
-            .order('desc')
-            .limit(limit)
-            .call(),
-        timeoutMs,
-        options.signal,
-        'Horizon',
-      );
-      
-      return payments.records;
-    } catch (error: any) {
+      const payments = await server.payments()
+        .forAccount(publicKey)
+        .order('desc')
+        .limit(limit)
+        .call();
+
+      return asHorizonOperationRecords(payments.records);
+    } catch (error: unknown) {
       logPaymentsError(publicKey, error);
       return [];
     }

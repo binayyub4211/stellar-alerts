@@ -307,20 +307,7 @@ export async function processPaymentRecord(
               receivedAt: receivedAt.toISOString(),
             };
 
-            const result = await evaluateAndDispatch(event, {
-              findRules: async () => alertRules as unknown as AlertRuleRecord[],
-              hasDispatched: async (paymentId) =>
-                Boolean(await prisma.alertRuleDispatchLog.findUnique({ where: { paymentId } })),
-              recordDispatch: async (paymentId, matchedRuleIds) => {
-                await prisma.alertRuleDispatchLog.create({
-                  data: { paymentId, matchedRuleIds },
-                });
-              },
-              enqueueAlert: async () => enqueuePaymentAlert(alertJobPayload),
-            });
-
-            dispatched = result.enqueued;
-            span.setAttribute('payment.matchedAlertRules', result.matchedRuleIds.length);
+            shouldSendAlert = shouldAlert(filterRules, paymentContext);
 
             if (result.matchedRuleIds.length === 0) {
               log.info(
@@ -809,7 +796,14 @@ export async function pollOnce() {
         pollSpan.end();
         return;
       }
-      await processWalletsConcurrently(wallets, env.WATCHER_WALLET_CONCURRENCY);
+      for (const wallet of wallets) {
+        try {
+          await processWalletPayments({ id: wallet.id, publicKey: wallet.publicKey, userId: wallet.userId });
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.error(`[WatcherWorker] Error processing wallet ${wallet.publicKey}:`, errMsg);
+        }
+      }
       const contractIds = getActiveContractIds();
       if (contractIds.length > 0) {
         for (const contractId of contractIds) {
