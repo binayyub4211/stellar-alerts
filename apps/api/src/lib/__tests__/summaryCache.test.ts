@@ -19,7 +19,12 @@ const { store, mockRedis, getRedisStatusMock } = vi.hoisted(() => {
     // ioredis: scan(cursor, 'MATCH', pattern, 'COUNT', count)
     scan: vi.fn(async (_cursor: string, _match: string, pattern: string) => {
       const keys = [...store.keys()].filter((k) => {
-        const re = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+        // Convert Redis SCAN pattern to regex
+        // * matches any sequence of characters
+        const regexPattern = pattern
+          .replace(/\*/g, '.*')
+          .replace(/\?/g, '.');
+        const re = new RegExp('^' + regexPattern + '$');
         return re.test(k);
       });
       return ['0', keys];

@@ -214,6 +214,90 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** True for a schema whose only meaning is `type: 'null'`. */
+function isNullSchema(node: unknown): boolean {
+  return (
+    isRecord(node) &&
+    node.type === 'null' &&
+    Object.keys(node).every((key) => key === 'type')
+  );
+}
+
+/**
+ * Returns a deep copy of `spec` rewritten so a strict OpenAPI 3.0 validator can
+ * parse it. `openapi-diff`'s swagger-parser validates every document it is
+ * handed against the OpenAPI 3.0 meta-schema and hard-fails the whole diff
+ * (`JSON_OBJECT_VALIDATION_FAILED`) when it meets a construct 3.0 does not
+ * define, aborting the check before any comparison happens.
+ *
+ * The committed `openapi.json` is generated from Zod, which emits two
+ * JSON-Schema constructs that OpenAPI 3.0 has no equivalent syntax for:
+ *
+ * - `propertyNames: { type: 'string' }` on `z.record(...)` — redundant, since
+ *   object keys are always strings and the value schema is already carried by
+ *   `additionalProperties`.
+ * - nullability as `anyOf: [X, { type: 'null' }]` (or a `type` list containing
+ *   `'null'`) — the 3.0 spelling is `nullable: true` on the schema itself.
+ *
+ * Both are rewritten here, on the copies handed to `openapi-diff` only; the
+ * raw specs still drive `analyzeComponentSchemas` and the report, so this never
+ * hides a real breaking change. OpenAPI 3.1 supports the full JSON Schema
+ * vocabulary, so specs declaring it are returned untouched.
+ */
+export function normalizeSpecForOpenApiDiff(
+  spec: Record<string, unknown>
+): Record<string, unknown> {
+  const version = typeof spec.openapi === 'string' ? spec.openapi : '';
+  if (!version.startsWith('3.0')) return spec;
+
+  const clone = structuredClone(spec);
+
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+    if (!isRecord(node)) return;
+
+    // OpenAPI 3.0 has no `propertyNames` keyword.
+    delete node.propertyNames;
+
+    // `anyOf`/`oneOf` with a `{ type: 'null' }` branch means "nullable".
+    for (const key of ['anyOf', 'oneOf']) {
+      const branches = node[key];
+      if (!Array.isArray(branches)) continue;
+      const kept = branches.filter((branch) => !isNullSchema(branch));
+      if (kept.length === branches.length) continue;
+      node[key] = kept;
+      node.nullable = true;
+      // A single remaining branch with no sibling keywords collapses cleanly
+      // onto the parent, matching how the 3.0 generator emits nullable schemas.
+      if (
+        kept.length === 1 &&
+        Object.keys(node).every((k) => k === key || k === 'nullable')
+      ) {
+        Object.assign(node, kept[0]);
+        delete node[key];
+      }
+    }
+
+    // `type: ['string', 'null']` means the same thing.
+    if (Array.isArray(node.type)) {
+      const types = node.type.filter((type) => type !== 'null');
+      if (types.length !== node.type.length) {
+        node.nullable = true;
+        if (types.length === 0) delete node.type;
+        else node.type = types;
+      }
+    }
+
+    for (const value of Object.values(node)) visit(value);
+  };
+
+  visit(clone);
+  return clone;
+}
+
 /** Recursively flags breaking changes between two component-schema definitions. */
 function diffSchemaNode(
   base: unknown,
@@ -454,6 +538,97 @@ function buildReport(parts: {
 }
 
 /**
+ * Recursively converts OpenAPI 3.1 / JSON Schema Draft-07 constructs (such as `propertyNames`
+ * and `{ anyOf: [..., { type: 'null' }] }` or `type: 'null'`) into OpenAPI 3.0-compatible
+ * forms so `openapi-diff`'s OpenAPI 3.0 schema validator doesn't reject valid specs.
+ */
+export function sanitizeSpecForDiff(spec: unknown): unknown {
+  if (spec === null || typeof spec !== 'object') {
+    return spec;
+  }
+  if (Array.isArray(spec)) {
+    return spec.map(sanitizeSpecForDiff);
+  }
+
+  const obj = spec as Record<string, unknown>;
+
+  // Check for anyOf / oneOf containing { type: 'null' }
+  for (const unionKey of ['anyOf', 'oneOf'] as const) {
+    if (Array.isArray(obj[unionKey])) {
+      const union = obj[unionKey] as unknown[];
+      const hasNull = union.some(
+        (s) => s && typeof s === 'object' && (s as Record<string, unknown>).type === 'null'
+      );
+      if (hasNull) {
+        const nonNulls = union.filter(
+          (s) => !s || typeof s !== 'object' || (s as Record<string, unknown>).type !== 'null'
+        );
+        const rest: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(obj)) {
+          if (k !== unionKey && k !== 'propertyNames') {
+            rest[k] = sanitizeSpecForDiff(v);
+          }
+        }
+        if (nonNulls.length === 1 && nonNulls[0] && typeof nonNulls[0] === 'object') {
+          const unwrapped = sanitizeSpecForDiff(nonNulls[0]) as Record<string, unknown>;
+          return {
+            ...rest,
+            ...unwrapped,
+            nullable: true,
+          };
+        } else {
+          return {
+            ...rest,
+            [unionKey]: nonNulls.map(sanitizeSpecForDiff),
+            nullable: true,
+          };
+        }
+      }
+    }
+  }
+
+  // Handle type: 'null'
+  if (obj.type === 'null') {
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k !== 'type' && k !== 'propertyNames') {
+        rest[k] = sanitizeSpecForDiff(v);
+      }
+    }
+    return {
+      ...rest,
+      nullable: true,
+    };
+  }
+
+  // Handle type: ['string', 'null']
+  if (Array.isArray(obj.type)) {
+    const types = obj.type.filter((t) => t !== 'null');
+    const nullable = obj.type.includes('null');
+    const rest: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k !== 'type' && k !== 'propertyNames') {
+        rest[k] = sanitizeSpecForDiff(v);
+      }
+    }
+    return {
+      ...rest,
+      type: types.length === 1 ? types[0] : types,
+      ...(nullable ? { nullable: true } : {}),
+    };
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'propertyNames') {
+      continue;
+    }
+    result[key] = sanitizeSpecForDiff(value);
+  }
+  return result;
+}
+
+/**
  * Diffs the head spec against the base spec and returns a structured result
  * plus a human-readable report. Never throws for "breaking changes found" —
  * that is a normal outcome surfaced via `result.breaking`; it only throws for
@@ -521,16 +696,22 @@ export async function checkOpenApiBreakingChanges(
     );
   }
 
+  // `openapi-diff` validates the specs against the OpenAPI meta-schema before
+  // diffing, so hand it copies whose keywords its target version can parse.
+  // The raw specs still drive the schema analyzer and the report below.
+  const baseSpecForDiff = normalizeSpecForOpenApiDiff(baseSpec);
+  const headSpecForDiff = normalizeSpecForOpenApiDiff(headSpec);
+
   let outcome: import('openapi-diff').DiffOutcome;
   try {
     outcome = (await openApiDiff.diffSpecs({
       sourceSpec: {
-        content: JSON.stringify(baseSpec),
+        content: JSON.stringify(sanitizeSpecForDiff(baseSpec)),
         location: 'base',
         format: 'openapi3',
       },
       destinationSpec: {
-        content: JSON.stringify(headSpec),
+        content: JSON.stringify(sanitizeSpecForDiff(headSpec)),
         location: 'head',
         format: 'openapi3',
       },

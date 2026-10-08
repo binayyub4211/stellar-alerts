@@ -5,6 +5,10 @@ const envSchema = z.object({
   READ_REPLICA_URL: z.string().url().optional(),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   JWT_SECRET: z.string().min(1),
+  // Signs Slack slash-command requests (see modules/slack). Optional so the
+  // API stays bootable without the Slack app configured; the /slack/commands
+  // route fails closed (503) when it is missing.
+  SLACK_SIGNING_SECRET: z.string().min(1).optional(),
   REDIS_URL: z.string().url(),
   REDIS_SENTINELS: z.string().optional(),
   REDIS_SENTINEL_MASTER_NAME: z.string().optional().default("mymaster"),
@@ -92,6 +96,29 @@ const envSchema = z.object({
   EXPORT_CLEANUP_INTERVAL_MS: z.coerce.number().int().positive().optional().default(600000),
   // A job stuck in `running` longer than this (e.g. worker crash) is failed.
   EXPORT_STALE_JOB_MS: z.coerce.number().int().positive().optional().default(1800000),
+  // ── Pre-execution simulation engine ──────────────────────────────────────
+  // Thresholds for the envelope risk engine (apps/api/src/services/simulation).
+  // Each maps to one rule family, so tuning a detection never requires a code
+  // change; see docs/simulation.md for what each threshold gates.
+  /** Outflow/pre-balance ratio at/above which an asset counts as drained. */
+  SIMULATION_NEAR_TOTAL_OUTFLOW_RATIO: z.coerce.number().positive().max(1).optional().default(0.85),
+  /** Distinct destinations in one envelope that count as a fan-out. */
+  SIMULATION_FAN_OUT_DESTINATION_THRESHOLD: z.coerce.number().int().positive().optional().default(3),
+  /** Outgoing transfers from one source that count as a burst. */
+  SIMULATION_SEQUENTIAL_TRANSFER_THRESHOLD: z.coerce.number().int().positive().optional().default(8),
+  /** Declared read-write footprint keys above this are flagged as unbounded growth. */
+  SIMULATION_MAX_FOOTPRINT_READ_WRITE_KEYS: z.coerce.number().int().positive().optional().default(64),
+  /** Distinct contracts spanned by a footprint that count as key probing. */
+  SIMULATION_FOOTPRINT_PROBE_CONTRACT_THRESHOLD: z.coerce.number().int().positive().optional().default(5),
+  /** Invocations of one contract in one envelope that count as fan-out. */
+  SIMULATION_MAX_INVOCATIONS_PER_CONTRACT: z.coerce.number().int().positive().optional().default(5),
+  /** Threat score at/above which a result is reported as block-recommended. */
+  SIMULATION_RISK_BLOCK_THRESHOLD: z.coerce.number().int().min(0).max(100).optional().default(80),
+  /**
+   * Amounts at/below this (in stroops) are treated as dust by the drain
+   * detector. Default 10 stroops == 0.000001 units.
+   */
+  SIMULATION_DUST_AMOUNT_STROOPS: z.coerce.number().int().min(0).optional().default(10),
 });
 export type Env = z.infer<typeof envSchema>;
 
@@ -109,12 +136,27 @@ const EXPORT_DEFAULTS = {
   EXPORT_STALE_JOB_MS: 1800000,
 };
 
+// Simulation-engine defaults, shared by the dev/test fallbacks below. Grouped
+// like EXPORT_DEFAULTS so a new simulation threshold only has to be added here
+// and to the schema above.
+const SIMULATION_DEFAULTS = {
+  SIMULATION_NEAR_TOTAL_OUTFLOW_RATIO: 0.85,
+  SIMULATION_FAN_OUT_DESTINATION_THRESHOLD: 3,
+  SIMULATION_SEQUENTIAL_TRANSFER_THRESHOLD: 8,
+  SIMULATION_MAX_FOOTPRINT_READ_WRITE_KEYS: 64,
+  SIMULATION_FOOTPRINT_PROBE_CONTRACT_THRESHOLD: 5,
+  SIMULATION_MAX_INVOCATIONS_PER_CONTRACT: 5,
+  SIMULATION_RISK_BLOCK_THRESHOLD: 80,
+  SIMULATION_DUST_AMOUNT_STROOPS: 10,
+};
+
 const parseEnv = (): Env => {
   const envInput = {
     ...process.env,
     DATABASE_URL: process.env.DATABASE_URL || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "postgresql://postgres:postgres@localhost:5432/stellar_alerts" : undefined),
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "dummy-telegram-bot-token" : undefined),
     JWT_SECRET: process.env.JWT_SECRET || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "dummy-jwt-secret-key-12345" : undefined),
+    SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "test-slack-signing-secret" : undefined),
     REDIS_URL: process.env.REDIS_URL || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "redis://localhost:6379" : undefined),
     MASTER_ENCRYPTION_KEY: process.env.MASTER_ENCRYPTION_KEY || (process.env.NODE_ENV === 'test' || process.env.VITEST ? "0123456789abcdef0123456789abcdef" : undefined),
     REDIS_SENTINELS: process.env.REDIS_SENTINELS,
@@ -210,6 +252,7 @@ const parseEnv = (): Env => {
       WASM_ANALYZER_MAX_UPLOAD_BYTES: 5 * 1024 * 1024,
       WASM_ANALYZER_TIMEOUT_MS: 5000,
       ...EXPORT_DEFAULTS,
+      ...SIMULATION_DEFAULTS,
     } as unknown as Env;
   }
 
@@ -239,6 +282,7 @@ const parseEnv = (): Env => {
     SOROBAN_INDEXER_BENCHMARK_DATA_ROWS: "10000",
     SOROBAN_STAKING_REWARD_WORKER_ENABLED: "true",
     ...EXPORT_DEFAULTS,
+    ...SIMULATION_DEFAULTS,
   } as unknown as Env;
 };
 
