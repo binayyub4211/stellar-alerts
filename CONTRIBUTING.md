@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Stellar Alerts! We welcome contributions to help build a seamless, real-time alert and tracking system for freelancers and businesses on the Stellar network.
 
+Please read and follow our [Code of Conduct](../CODE_OF_CONDUCT.md) — by participating in this project you agree to abide by its terms.
+
 ---
 
 ## 🚀 Quick Start Guide
@@ -48,7 +50,7 @@ npm install
    | `pool_timeout` | `10` | Seconds a query waits for a free connection before failing |
    | `idle_timeout` | `30` | Seconds an unused connection is kept before being released |
 
-   Set `DATABASE_REPLICA_URL` to send read-only queries (wallet and payment
+   Set `READ_REPLICA_URL` to send read-only queries (wallet and payment
    listings) to a PostgreSQL read replica. Without it those queries run against
    the primary.
 
@@ -89,6 +91,29 @@ To scope a command to a single workspace, use its path:
 `npm run typecheck --workspace=apps/web`. See
 [`docs/ci.md`](docs/ci.md) for how the CI matrix is wired.
 
+Validate the documented environment variable names and run the focused tests
+for the contribution checks with:
+
+```bash
+npm run check:env-examples
+npm run test:contributor-checks
+```
+
+The pre-commit hook runs the environment validation automatically and scans
+staged additions for common token, private-key, and sensitive-assignment
+formats. You can run the same secret check directly with:
+
+```bash
+npm run check:secrets -- --staged
+```
+
+The secret scanner inspects only added text lines in the staged diff (or in
+each commit from the base-to-head range used in CI). It reports the detector
+type, file, and line number without printing the matching value. It
+intentionally skips existing repository contents, deleted lines, and binary
+files, and its focused patterns
+do not replace a full secret-management review.
+
 ---
 
 ### 6. OpenAPI Schema Compatibility
@@ -127,6 +152,21 @@ Or launch components individually from the project root:
 | `npm run dev:api` | Starts the Fastify API server on http://localhost:3001 |
 | `npm run dev:worker` | Starts the Stellar Horizon SSE Ingestion Worker process |
 | `npm run dev:web` | Starts the Next.js Frontend Dashboard on http://localhost:3000 |
+
+---
+
+## Production TypeScript `any` Policy
+
+Production TypeScript under `apps/*/src` and `packages/*/src` must not introduce new explicit `any` types or casts. Tests, generated sources, and declaration files are excluded. Existing occurrences are recorded in an owned baseline so they can be removed incrementally without blocking unrelated work.
+
+Run the policy and its focused tests before opening a PR:
+
+```bash
+npm run quality:any
+npm run test:quality
+```
+
+When removing an existing occurrence, run `npm run quality:any:update` and commit the smaller baseline. The update command refuses to expand the baseline. If an exception is unavoidable, run `npm run quality:any` to obtain its fingerprint, then add it to the baseline manually with an accountable owner and a compatibility rationale; reviewers must approve that exception. CI rejects new occurrences, undocumented exceptions, changed fingerprints, and stale allowances.
 
 ---
 
@@ -175,9 +215,16 @@ Or launch components individually from the project root:
 
 ---
 
+## 📜 Code of Conduct
+
+This project and everyone participating in it is governed by the [Stellar Alerts Code of Conduct](../CODE_OF_CONDUCT.md). By contributing, you agree to uphold these standards.
+
+To report a violation, please use one of the channels listed in the [Reporting Guidelines](../CODE_OF_CONDUCT.md#reporting-guidelines) section of the Code of Conduct.
+
+---
+
 ## 💬 Need Help? Join Community Chat
 
 Have questions or want to discuss an issue before working on it? Join our Telegram maintainers & contributors chat:
 
 👉 **[Join Stellar Alerts Telegram Group](https://t.me/+uElHrnWMb180MWM0)**
-

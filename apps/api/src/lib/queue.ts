@@ -17,7 +17,6 @@ import { instrumentedWebhookFetch } from './webhook-telemetry';
 import { persistDeadLetter } from './dead-letter';
 import { ssrfSafeFetch, validateUrlForSsrf } from '../utils/ssrf';
 import { decryptPersonalField } from '../utils/privacy';
-import { dispatchWhatsAppAlert } from '../utils/whatsapp';
 import { emailService } from '../services/email.service';
 import { dispatchDiscordAlert } from '../utils/discord';
 import { dispatchSlackAlert, isValidSlackWebhookUrl } from '../utils/slack';
@@ -50,20 +49,8 @@ export interface AlertJobData {
   assetIssuer?: string | null;
   fromAddress: string;
   receivedAt: string;
-  /** Correlation ID propagated from the originating HTTP request, if any. */
-  requestId?: string;
-  /**
-   * W3C traceparent of the payment-detection request that produced this job.
-   * Carried across the BullMQ boundary so webhook dispatch spans join the
-   * originating trace instead of starting a disconnected one.
-   */
-  traceparent?: string;
-}
-
-/** Per-dispatch context threaded into the circuit breaker action. */
-interface WebhookDispatchMeta {
-  webhookId: string;
-  traceparent?: string;
+  /** Optional alert filter config — if provided, alerts are suppressed when rules fail */
+  filterConfig?: AlertFilterConfig;
 }
 
 const redisHost = process.env.REDIS_HOST || "localhost";

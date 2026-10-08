@@ -9,6 +9,7 @@ import {
   summarizeSpec,
   compareSemver,
   analyzeComponentSchemas,
+  normalizeSpecForOpenApiDiff,
 } from './check-openapi-breaking-changes';
 
 /**
@@ -342,7 +343,6 @@ describe('checkOpenApiBreakingChanges', () => {
   it('exits 1 via the CLI when breaking, 0 when clean (exit-code contract)', async () => {
     const { execFileSync } = await import('node:child_process');
     const script = path.resolve(originalCwd, 'scripts/check-openapi-breaking-changes.ts');
-
     const run = (base: Record<string, unknown>, head: Record<string, unknown>): number => {
       const baseFile = writeTempSpecSync(base);
       const headFile = writeTempSpecSync(head);
@@ -350,7 +350,7 @@ describe('checkOpenApiBreakingChanges', () => {
         execFileSync(
           'npx',
           ['tsx', script, '--base-path', baseFile, '--head', headFile],
-          { encoding: 'utf8', stdio: 'pipe' }
+          { encoding: 'utf8', stdio: 'pipe', shell: process.platform === 'win32' }
         );
         return 0;
       } catch (err: unknown) {
@@ -365,4 +365,61 @@ describe('checkOpenApiBreakingChanges', () => {
     const cleanSpec = specFixture({ components: { schemas: { CreateWalletInput: walletSchema } } });
     expect(run(cleanSpec, cleanSpec)).toBe(0);
   }, 120000);
+});
+
+describe('normalizeSpecForOpenApiDiff', () => {
+  it('drops the JSON-Schema-only propertyNames keyword from OpenAPI 3.0 records', () => {
+    const normalized = normalizeSpecForOpenApiDiff(
+      specFixture({
+        components: {
+          schemas: {
+            RecordInput: {
+              type: 'object',
+              propertyNames: { type: 'string' },
+              additionalProperties: { type: 'string' },
+            },
+          },
+        },
+      })
+    ) as unknown as { components: { schemas: Record<string, Record<string, unknown>> } };
+
+    const schema = normalized.components.schemas.RecordInput;
+    expect(schema.propertyNames).toBeUndefined();
+    expect(schema.additionalProperties).toEqual({ type: 'string' });
+  });
+
+  it('rewrites anyOf null branches as nullable so an OpenAPI 3.0 validator accepts them', () => {
+    const normalized = normalizeSpecForOpenApiDiff(
+      specFixture({
+        components: {
+          schemas: {
+            LedgerBounds: {
+              anyOf: [
+                { type: 'object', properties: { min: { type: 'integer' } } },
+                { type: 'null' },
+              ],
+            },
+          },
+        },
+      })
+    ) as unknown as { components: { schemas: Record<string, Record<string, unknown>> } };
+
+    const schema = normalized.components.schemas.LedgerBounds;
+    expect(schema.anyOf).toBeUndefined();
+    expect(schema.nullable).toBe(true);
+    expect(schema.type).toBe('object');
+  });
+
+  it('leaves OpenAPI 3.1 documents untouched, since 3.1 allows the full JSON Schema vocabulary', () => {
+    const spec = {
+      openapi: '3.1.0',
+      info: { title: 'Stellar Alerts API', version: '1.0.0' },
+      paths: {},
+      components: {
+        schemas: { RecordInput: { type: 'object', propertyNames: { type: 'string' } } },
+      },
+    };
+
+    expect(normalizeSpecForOpenApiDiff(spec)).toBe(spec);
+  });
 });

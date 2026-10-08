@@ -1,4 +1,4 @@
-import * as StellarSdk from 'stellar-sdk';
+import { isValidEd25519PublicKey } from '@stellar-alerts/shared';
 import { env } from '../config/env';
 import { prisma, connectWithRetry } from '../lib/prisma';
 import { stellar, decodeHorizonAsset, parseSacTransferEvent } from '../lib/stellar';
@@ -115,6 +115,7 @@ export async function processPaymentRecord(
       span.setAttribute('payment.walletId', wallet.id);
       span.setAttribute('payment.asset', asset);
 
+      const pagingToken = getHorizonPagingToken(record);
       const existing = await prisma.payment.findUnique({ where: { txHash } });
       let payment: { id: string } | null = existing;
       let isNewPayment = false;
@@ -168,42 +169,44 @@ export async function processPaymentRecord(
         }
       }
 
-      if (!existing) {
-        try {
-          payment = await prisma.$transaction(async (tx) => {
-            const createdPayment = await tx.payment.create({
-              data: {
-                walletId: wallet.id,
-                txHash,
-                fromAddress,
-                amount: Number(amount),
-                asset,
-                assetIssuer,
-                memo,
-                receivedAt,
-              },
-            });
+      const transactionResult = await prisma.$transaction(async (tx) => {
+        const inserted = await tx.payment.createMany({
+          data: [{
+            walletId: wallet.id,
+            txHash,
+            fromAddress,
+            amount: Number(amount),
+            asset,
+            assetIssuer,
+            memo,
+            receivedAt,
+          }],
+          skipDuplicates: true,
+        });
+        const persistedPayment = await tx.payment.findUnique({ where: { txHash } });
 
-            const eventPayload = {
-              paymentId: createdPayment.id,
-              txHash,
-              walletId: wallet.id,
-              amount,
-              asset,
-              assetIssuer,
-              fromAddress,
-              receivedAt: receivedAt.toISOString(),
-            };
-            await tx.outboxEvent.createMany({
-              data: [
-                ...(shouldSendAlert
-                  ? [{ eventType: 'payment.alert', aggregateId: createdPayment.id, payload: eventPayload }]
-                  : []),
-                { eventType: 'payment.realtime', aggregateId: createdPayment.id, payload: eventPayload },
-              ],
-            });
+        if (!persistedPayment) {
+          throw new Error(`Payment ${txHash} was not available after its transactional insert`);
+        }
 
-            return createdPayment;
+        if (inserted.count > 0) {
+          const eventPayload = {
+            paymentId: persistedPayment.id,
+            txHash,
+            walletId: wallet.id,
+            amount,
+            asset,
+            assetIssuer,
+            fromAddress,
+            receivedAt: receivedAt.toISOString(),
+          };
+          await tx.outboxEvent.createMany({
+            data: [
+              ...(shouldSendAlert
+                ? [{ eventType: 'payment.alert', aggregateId: persistedPayment.id, payload: eventPayload }]
+                : []),
+              { eventType: 'payment.realtime', aggregateId: persistedPayment.id, payload: eventPayload },
+            ],
           });
           isNewPayment = true;
         } catch (err: unknown) {
@@ -216,9 +219,37 @@ export async function processPaymentRecord(
             log.info({ txHash }, '🔁 Duplicate payment insert raced and lost, skipping (already recorded)');
             payment = await prisma.payment.findUnique({ where: { txHash } });
           } else {
-            throw err;
+            const previousPagingToken =
+              options.previousPagingToken !== undefined
+                ? options.previousPagingToken
+                : (await tx.ingestionCursor.findUnique({ where: { walletId: wallet.id } }))?.pagingToken ?? null;
+            cursorGap = detectLedgerGap(previousPagingToken, pagingToken);
+
+            await tx.ingestionCursor.upsert({
+              where: { walletId: wallet.id },
+              create: { walletId: wallet.id, pagingToken },
+              update: {
+                pagingToken,
+                ...(cursorGap.hasGap
+                  ? buildCursorGapUpdate(cursorGap.ledgerDelta)
+                  : buildCursorSuccessUpdate()),
+              },
+            });
           }
         }
+
+        return {
+          payment: persistedPayment,
+          isNewPayment: inserted.count > 0,
+          gap: cursorGap,
+        };
+      });
+      payment = transactionResult.payment;
+      isNewPayment = transactionResult.isNewPayment;
+      const { gap } = transactionResult;
+
+      if (!payment) {
+        throw new Error(`Payment ${txHash} was not available after its transactional insert`);
       }
 
       if (isNewPayment && payment) {
@@ -276,20 +307,7 @@ export async function processPaymentRecord(
               receivedAt: receivedAt.toISOString(),
             };
 
-            const result = await evaluateAndDispatch(event, {
-              findRules: async () => alertRules as unknown as AlertRuleRecord[],
-              hasDispatched: async (paymentId) =>
-                Boolean(await prisma.alertRuleDispatchLog.findUnique({ where: { paymentId } })),
-              recordDispatch: async (paymentId, matchedRuleIds) => {
-                await prisma.alertRuleDispatchLog.create({
-                  data: { paymentId, matchedRuleIds },
-                });
-              },
-              enqueueAlert: async () => enqueuePaymentAlert(alertJobPayload),
-            });
-
-            dispatched = result.enqueued;
-            span.setAttribute('payment.matchedAlertRules', result.matchedRuleIds.length);
+            shouldSendAlert = shouldAlert(filterRules, paymentContext);
 
             if (result.matchedRuleIds.length === 0) {
               log.info(
@@ -479,7 +497,7 @@ export async function ensureCursor(wallet: {
 export async function processWalletPayments(wallet: { id: string; publicKey: string; userId?: string }) {
   return tracer.startActiveSpan('watcher.processWalletPayments', async (span) => {
     try {
-      if (!wallet.publicKey || !StellarSdk.StrKey.isValidEd25519PublicKey(wallet.publicKey)) {
+      if (!wallet.publicKey || !isValidEd25519PublicKey(wallet.publicKey)) {
         log.warn(`[WatcherWorker] Skipping invalid public key checksum: "${wallet.publicKey}"`);
         span.setStatus({ code: SpanStatusCode.OK });
         span.end();
@@ -538,20 +556,17 @@ export async function processWalletPayments(wallet: { id: string; publicKey: str
         }
       }
 
-      log.warn(
-        `[WatcherWorker] Catch-up page limit reached for ${wallet.publicKey.substring(0, 8)}..., resuming next poll from ${cursor}`,
-      );
-      span.setStatus({ code: SpanStatusCode.OK });
-      span.end();
-    } catch (err) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
-      span.end();
-      throw err;
+      if (records.length < CURSOR_PAGE_SIZE) return;
     }
   });
 }
 
-export const handleStreamRecord = processPaymentRecord;
+    console.warn(
+      `[WatcherWorker] Catch-up page limit reached for ${wallet.publicKey.substring(0, 8)}..., resuming next poll from ${cursor}`
+    );
+  } finally {
+    await lock.release();
+  }
 
 export type StreamHandlerOptions = {
   onmessage: (record: HorizonOperationRecord) => Promise<void>;
@@ -591,7 +606,7 @@ export async function startHorizonSSEStream(
 
     const noopClose = () => {};
 
-    if (!wallet.publicKey || !wallet.publicKey.startsWith('G')) {
+    if (!wallet.publicKey || !isValidEd25519PublicKey(wallet.publicKey)) {
       span.setStatus({ code: SpanStatusCode.ERROR, message: 'Invalid public key' });
       span.end();
       return noopClose;
@@ -784,7 +799,14 @@ export async function pollOnce() {
         pollSpan.end();
         return;
       }
-      await processWalletsConcurrently(wallets, env.WATCHER_WALLET_CONCURRENCY);
+      for (const wallet of wallets) {
+        try {
+          await processWalletPayments({ id: wallet.id, publicKey: wallet.publicKey, userId: wallet.userId });
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.error(`[WatcherWorker] Error processing wallet ${wallet.publicKey}:`, errMsg);
+        }
+      }
       const contractIds = getActiveContractIds();
       if (contractIds.length > 0) {
         for (const contractId of contractIds) {
@@ -985,4 +1007,36 @@ if (require.main === module) {
   registerSupervisorHeartbeat();
   startMemoryMonitor();
   runWatcher();
+
+  // Issue #20: Graceful shutdown for the watcher worker process
+  let watcherIntervalId: NodeJS.Timeout | undefined;
+
+  // Patch runWatcher to capture the interval handle so we can stop it
+  const originalSetInterval = global.setInterval;
+  (global as any).setInterval = (fn: (...args: any[]) => void, delay?: number, ...args: any[]) => {
+    const id = originalSetInterval(fn, delay, ...args);
+    watcherIntervalId = id;
+    return id;
+  };
+
+  const shutdownWorker = async (signal: string) => {
+    console.log(`[WatcherWorker] Received ${signal}. Shutting down gracefully...`);
+
+    if (watcherIntervalId !== undefined) {
+      clearInterval(watcherIntervalId);
+      watcherIntervalId = undefined;
+    }
+
+    try {
+      await prisma.$disconnect();
+      console.log('[WatcherWorker] Shutdown complete.');
+      process.exit(0);
+    } catch (err) {
+      console.error('[WatcherWorker] Error during shutdown:', err);
+      process.exit(1);
+    }
+  };
+
+  process.once('SIGTERM', () => shutdownWorker('SIGTERM'));
+  process.once('SIGINT', () => shutdownWorker('SIGINT'));
 }

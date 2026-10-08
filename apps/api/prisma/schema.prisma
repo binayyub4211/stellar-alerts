@@ -29,6 +29,7 @@ model User {
   notificationDeliveries NotificationDelivery[]
   refreshSessions        RefreshSession[]
   telegramSyncCodes      TelegramSyncCode[]
+  simulations            TransactionSimulation[]
 }
 
 model Wallet {
@@ -41,6 +42,8 @@ model Wallet {
   payments   Payment[]
   cursor     IngestionCursor?
   alertRules AlertRule[]
+
+  @@index([userId, createdAt])
 }
 
 model IngestionCursor {
@@ -321,6 +324,49 @@ model ExportJob {
 
   @@index([userId, createdAt])
   @@index([status, expiresAt])
+}
+
+// ── Pre-Execution Simulation Results ─────────────────────────────────────────
+//
+// One row per POST /simulations/analyze call: the threat assessment produced by
+// the pre-execution engine (apps/api/src/services/simulation) for a Stellar /
+// Soroban transaction envelope, retained as an audit trail.
+//
+// `score` (0-100) and `band` are stored as first-class columns so operators can
+// query "show me every CRITICAL simulation in the last 24h" without a JSONB
+// scan; the full breakdown lives in `report` (JSON) exactly as the engine
+// produced it, including per-indicator evidence and the threshold set in force
+// at the time — a stored report must stay explainable even after the thresholds
+// are retuned.
+//
+// `sourceAccount` is a public Stellar key, never a secret. `envelopeHash` is a
+// SHA-256 of the submitted envelope XDR so repeat submissions of the identical
+// envelope are detectable without storing the envelope itself.
+model TransactionSimulation {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAccount String
+  network       String   @default("PUBLIC")
+  label         String?
+  // SHA-256 (hex) of the submitted envelope XDR, when one was supplied.
+  envelopeHash  String?
+  // 0-100 threat score and its band (SAFE | LOW | MODERATE | HIGH | CRITICAL).
+  score         Int
+  band          String
+  // True when the score reached the configured block threshold.
+  blockExecution Boolean @default(false)
+  // Indicator codes that fired, most severe first. Redundant with `report`
+  // but cheap to filter on.
+  indicatorCodes String[]
+  // Complete engine output: drain analysis, footprint diff, contract
+  // interactions, indicators, risk assessment, and meta.
+  report         Json
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([band, createdAt])
+  @@index([sourceAccount, createdAt])
 }
 
 model SorobanEventSnapshot {
@@ -651,6 +697,7 @@ model NotificationDeliveryAttempt {
   @@index([status])
   @@index([paymentId])
   @@index([createdAt])
+  @@index([deliveryKey, status])
 }
 
 // ── Dead-letter inspection & replay (#273) ───────────────────────────────────

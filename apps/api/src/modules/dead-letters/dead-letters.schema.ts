@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cursorSchema, limitSchema } from '../../utils/pagination';
 
 // Prisma IDs are CUIDs (model id fields use `@default(cuid())`), so route
 // params must be strict CUIDs: `c` prefix + base36 lowercase. Anything else
@@ -15,8 +16,8 @@ export const listDeadLettersQuerySchema = z.object({
   status: z.enum(['pending', 'retried', 'suppressed']).optional(),
   q: z.string().max(200).optional(),
   maxAgeDays: z.coerce.number().int().min(1).max(365).optional(),
-  page: z.coerce.number().int().min(1).max(10000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  limit: limitSchema,
+  cursor: cursorSchema,
 });
 
 export const suppressDeadLetterSchema = z.object({
@@ -53,20 +54,19 @@ export const sandboxMockResponseSchema = z.object({
 });
 
 export const sandboxReplayInputSchema = z.object({
-  mockResponse: sandboxMockResponseSchema.default({
-    status: 200,
-    headers: {},
-    body: '',
-    delayMs: 0,
-  }),
+  mockStatusCode: z.coerce.number().int().min(100).max(599).optional().default(200),
+  mockResponseBody: z.string().optional(),
+  mockResponseHeaders: z.record(z.string(), z.string()).optional(),
 });
 
 export const listSandboxReplaysQuerySchema = z.object({
-  status: z.enum(['completed', 'failed']).optional(),
-  page: z.coerce.number().int().min(1).max(10000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  limit: limitSchema,
+  cursor: cursorSchema,
 });
 
-export type SandboxMockResponse = z.infer<typeof sandboxMockResponseSchema>;
-export type SandboxReplayInput = z.infer<typeof sandboxReplayInputSchema>;
-export type ListSandboxReplaysQuery = z.infer<typeof listSandboxReplaysQuerySchema>;
+export type SandboxMockResponse = {
+  status: number;
+  body: string;
+  headers: Record<string, string>;
+  delayMs: number;
+};
