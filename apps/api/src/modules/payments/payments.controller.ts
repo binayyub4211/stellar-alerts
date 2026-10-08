@@ -1,10 +1,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { normalizeTransactionHash } from '@stellar-alerts/shared';
 import { generateTaxExportCsv } from '../../utils/tax-exporter';
 import { generateLedgerStatementPdf } from '../../utils/pdf-generator';
 import { generateTransactionReceiptPdf } from '../../utils/receipt-generator';
 import { prismaRead, prisma } from '../../lib/prisma';
 import { paymentsService } from './payments.service';
+import { CursorError, cursorSchema, limitSchema } from '../../utils/pagination';
 import { AuthenticationError, AuthorizationError, NotFoundError, ValidationError, zodValidationError } from '../../lib/errors';
 
 const getPaymentsSchema = z
@@ -12,7 +14,8 @@ const getPaymentsSchema = z
     // Optional: omitted by the dashboard's "All Wallets" view (see apps/web
     // src/app/(app)/dashboard/page.tsx fetchPayments), which previously 400'd here.
     walletId: z.string().optional(),
-    limit: z.coerce.number().optional().default(20),
+    limit: limitSchema,
+    cursor: cursorSchema,
     asset: z.string().optional(),
     memo: z.string().optional(),
     dateFrom: z.coerce.date().optional(),
@@ -55,20 +58,28 @@ export class PaymentsController {
       throw new AuthenticationError('User not authenticated');
     }
 
-    const payments = await paymentsService.getPayments(
-      request.user.id,
-      parsed.data.walletId,
-      parsed.data.limit,
-      {
-        asset: parsed.data.asset,
-        memo: parsed.data.memo,
-        dateFrom: parsed.data.dateFrom,
-        dateTo: parsed.data.dateTo,
-        sortBy: parsed.data.sortBy,
-        sortOrder: parsed.data.sortOrder,
-      },
-    );
-    return reply.send({ success: true, payments });
+    try {
+      const result = await paymentsService.getPayments(
+        request.user.id,
+        parsed.data.walletId,
+        parsed.data.limit,
+        {
+          asset: parsed.data.asset,
+          memo: parsed.data.memo,
+          dateFrom: parsed.data.dateFrom,
+          dateTo: parsed.data.dateTo,
+          sortBy: parsed.data.sortBy,
+          sortOrder: parsed.data.sortOrder,
+          cursor: parsed.data.cursor,
+        },
+      );
+      return reply.send({ success: true, payments: result.items, pagination: result.pagination });
+    } catch (err) {
+      if (err instanceof CursorError) {
+        return reply.status(400).send({ error: 'Invalid cursor', message: err.message });
+      }
+      throw err;
+    }
   }
 
   async getSummary(request: FastifyRequest, reply: FastifyReply) {
@@ -101,7 +112,7 @@ export class PaymentsController {
       throw new AuthenticationError('User not authenticated');
     }
 
-    const payments = await paymentsService.getPayments(request.user.id, parsed.data.walletId, 5000);
+    const { items: payments } = await paymentsService.getPayments(request.user.id, parsed.data.walletId, 5000);
     const csv = generateTaxExportCsv(
       payments.map((payment) => ({
         date: payment.receivedAt,
@@ -134,7 +145,7 @@ export class PaymentsController {
     const periodStart =
       parsed.data.periodStart ?? new Date(periodEnd.getTime() - 365 * 24 * 60 * 60 * 1000);
 
-    const payments = await paymentsService.getPayments(request.user.id, parsed.data.walletId, 5000);
+    const { items: payments } = await paymentsService.getPayments(request.user.id, parsed.data.walletId, 5000);
     const inPeriod = payments.filter((payment) => {
       const receivedAt = new Date(payment.receivedAt);
       return receivedAt >= periodStart && receivedAt <= periodEnd;
@@ -195,10 +206,16 @@ export class PaymentsController {
       throw new ValidationError('Missing transaction hash parameter');
     }
 
+    // The route accepts either a 64-hex transaction hash (optionally
+    // 0x-prefixed, in any case) or a payment id. Normalize the hash form
+    // through the shared validator; ids are passed through untouched so the
+    // existing OR lookup keeps working.
+    const normalizedTxHash = normalizeTransactionHash(txHash);
+
     const payment = await prisma.payment.findFirst({
       where: {
         OR: [
-          { txHash: txHash },
+          { txHash: normalizedTxHash ?? txHash },
           { id: txHash },
         ],
       },

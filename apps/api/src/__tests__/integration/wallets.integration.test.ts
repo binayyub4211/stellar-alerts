@@ -257,6 +257,11 @@ describe('Wallet Registration Integration Tests', () => {
       expect(response.body).toEqual({
         success: true,
         wallets: [],
+        pagination: {
+          limit: 20,
+          nextCursor: undefined,
+          hasNextPage: false,
+        },
       });
     });
 

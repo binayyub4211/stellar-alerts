@@ -68,7 +68,7 @@ describe('Delivery Logs (Dead Letters) Integration Tests', () => {
       const authRequest = makeAuthenticatedRequest(testServer, testUser);
 
       const response = await authRequest
-        .get('/dead-letters?page=1&limit=10')
+        .get('/dead-letters?limit=10')
         .expect(200);
 
       expect(response.body).toEqual({
@@ -83,7 +83,7 @@ describe('Delivery Logs (Dead Letters) Integration Tests', () => {
       const authRequest = makeAuthenticatedRequest(testServer, testUser);
 
       const response = await authRequest
-        .get('/dead-letters?page=invalid&limit=abc')
+        .get('/dead-letters?limit=abc')
         .expect(400);
 
       expect(response.body.error).toMatchObject({

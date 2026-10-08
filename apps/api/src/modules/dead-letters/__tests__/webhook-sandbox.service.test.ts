@@ -279,20 +279,19 @@ describe('sandbox schemas (#456)', () => {
     const parsed = sandboxReplayInputSchema.safeParse({});
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.mockResponse).toEqual({ status: 200, headers: {}, body: '', delayMs: 0 });
+      expect(parsed.data.mockStatusCode).toBe(200);
+      expect(parsed.data.mockResponseBody).toBeUndefined();
+      expect(parsed.data.mockResponseHeaders).toBeUndefined();
     }
   });
 
-  it('rejects out-of-range mock statuses and delays', () => {
-    expect(sandboxMockResponseSchema.safeParse({ status: 99 }).success).toBe(false);
-    expect(sandboxMockResponseSchema.safeParse({ status: 600 }).success).toBe(false);
-    expect(sandboxMockResponseSchema.safeParse({ delayMs: 5001 }).success).toBe(false);
-    expect(sandboxMockResponseSchema.safeParse({ delayMs: -1 }).success).toBe(false);
+  it('rejects out-of-range mock statuses', () => {
+    expect(sandboxReplayInputSchema.safeParse({ mockStatusCode: 99 }).success).toBe(false);
+    expect(sandboxReplayInputSchema.safeParse({ mockStatusCode: 600 }).success).toBe(false);
   });
 
   it('validates pagination bounds on the replay list query', () => {
-    expect(listSandboxReplaysQuerySchema.safeParse({ page: 0 }).success).toBe(false);
-    expect(listSandboxReplaysQuerySchema.safeParse({ pageSize: 101 }).success).toBe(false);
-    expect(listSandboxReplaysQuerySchema.safeParse({ status: 'nope' }).success).toBe(false);
+    expect(listSandboxReplaysQuerySchema.safeParse({ limit: 0 }).success).toBe(false);
+    expect(listSandboxReplaysQuerySchema.safeParse({ limit: 101 }).success).toBe(false);
   });
 });

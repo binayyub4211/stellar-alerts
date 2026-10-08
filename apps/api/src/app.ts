@@ -22,6 +22,7 @@ import { deadLettersRoutes } from './modules/dead-letters/dead-letters.routes';
 import { discordInteractionsRoutes } from './modules/discord-interactions';
 import { graphqlRoutes } from './modules/graphql/graphql.routes';
 import { exportsRoutes } from './modules/exports/exports.routes';
+import { simulationRoutes } from './modules/simulation/simulation.routes';
 import { openApiOptions } from './openapi.config';
 import { loggerOptions } from './lib/logger';
 
@@ -194,6 +195,7 @@ export const buildApp = async () => {
   app.register(deadLettersRoutes);
 await app.register(graphqlRoutes);
   app.register(exportsRoutes);
+  app.register(simulationRoutes);
   app.register(discordInteractionsRoutes);
 
   return app;

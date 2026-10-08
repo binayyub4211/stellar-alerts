@@ -1,8 +1,17 @@
 import * as StellarSdk from 'stellar-sdk';
-import { asHorizonOperationRecords, isHorizonOperationRecord, type HorizonOperationRecord } from '../types/horizon';
+import { isValidEd25519PublicKey } from '@stellar-alerts/shared';
+import { env } from '../config/env';
+import { stellarNetwork } from '../config/network';
+import { withDeadline } from './external-request';
+import { isHorizonOperationRecord, type HorizonOperationRecord } from '../types/horizon';
 import type { SorobanRpcEvent } from '../types/soroban-event';
 
-const server = new StellarSdk.Horizon.Server('https://horizon-testnet.stellar.org');
+// Configure global Horizon AxiosClient default timeout
+if ((StellarSdk.Horizon as any)?.AxiosClient?.defaults) {
+  (StellarSdk.Horizon as any).AxiosClient.defaults.timeout = env.HORIZON_REQUEST_TIMEOUT_MS;
+}
+
+const server = new StellarSdk.Horizon.Server(stellarNetwork.horizonEndpoints[0]);
 
 export const STROOPS_PER_UNIT = 10_000_000;
 
@@ -302,9 +311,7 @@ export function countMultisigSignatures(
 }
 
 export const DEFAULT_HORIZON_ENDPOINTS = [
-  process.env.HORIZON_URL || 'https://horizon-testnet.stellar.org',
-  process.env.HORIZON_URL_NODE2 || 'https://horizon-testnet.publicnode.org',
-  process.env.HORIZON_URL_NODE3 || 'https://horizon-testnet.lobstr.co',
+  ...stellarNetwork.horizonEndpoints,
 ];
 
 export class MultiNodeHorizonClient {
@@ -332,8 +339,9 @@ export class MultiNodeHorizonClient {
     publicKey: string,
     cursor: string,
     limit = 50,
-  ): Promise<{ records: HorizonOperationRecord[]; allNodesFailed: boolean; lastError: string | null }> {
-    if (!publicKey || !StellarSdk.StrKey.isValidEd25519PublicKey(publicKey)) {
+    options: { timeoutMs?: number; signal?: AbortSignal } = {},
+  ): Promise<{ records: any[]; allNodesFailed: boolean; lastError: string | null }> {
+    if (!publicKey || !isValidEd25519PublicKey(publicKey)) {
       console.warn(`[MultiNodeHorizon] Skipping invalid public key checksum: "${publicKey}"`);
       return { records: [], allNodesFailed: false, lastError: null };
     }
@@ -442,7 +450,7 @@ export const stellar = {
     publicKey: string,
     options: { timeoutMs?: number; signal?: AbortSignal } = {},
   ): Promise<{ signers: MultisigSigner[]; thresholds: MultisigThresholds } | null> {
-    if (!publicKey || !StellarSdk.StrKey.isValidEd25519PublicKey(publicKey)) {
+    if (!publicKey || !isValidEd25519PublicKey(publicKey)) {
       console.warn(`[Stellar] Skipping invalid public key format or checksum: "${publicKey}"`);
       return null;
     }
@@ -469,8 +477,12 @@ export const stellar = {
     }
   },
   // Helper to fetch recent payments for a given account
-  async getRecentPayments(publicKey: string, limit: number = 10): Promise<HorizonOperationRecord[]> {
-    if (!publicKey || !StellarSdk.StrKey.isValidEd25519PublicKey(publicKey)) {
+  async getRecentPayments(
+    publicKey: string,
+    limit: number = 10,
+    options: { timeoutMs?: number; signal?: AbortSignal } = {},
+  ) {
+    if (!publicKey || !isValidEd25519PublicKey(publicKey)) {
       console.warn(`[Stellar] Skipping invalid public key format or checksum: "${publicKey}"`);
       return [];
     }

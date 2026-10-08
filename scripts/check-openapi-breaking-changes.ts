@@ -214,6 +214,90 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** True for a schema whose only meaning is `type: 'null'`. */
+function isNullSchema(node: unknown): boolean {
+  return (
+    isRecord(node) &&
+    node.type === 'null' &&
+    Object.keys(node).every((key) => key === 'type')
+  );
+}
+
+/**
+ * Returns a deep copy of `spec` rewritten so a strict OpenAPI 3.0 validator can
+ * parse it. `openapi-diff`'s swagger-parser validates every document it is
+ * handed against the OpenAPI 3.0 meta-schema and hard-fails the whole diff
+ * (`JSON_OBJECT_VALIDATION_FAILED`) when it meets a construct 3.0 does not
+ * define, aborting the check before any comparison happens.
+ *
+ * The committed `openapi.json` is generated from Zod, which emits two
+ * JSON-Schema constructs that OpenAPI 3.0 has no equivalent syntax for:
+ *
+ * - `propertyNames: { type: 'string' }` on `z.record(...)` — redundant, since
+ *   object keys are always strings and the value schema is already carried by
+ *   `additionalProperties`.
+ * - nullability as `anyOf: [X, { type: 'null' }]` (or a `type` list containing
+ *   `'null'`) — the 3.0 spelling is `nullable: true` on the schema itself.
+ *
+ * Both are rewritten here, on the copies handed to `openapi-diff` only; the
+ * raw specs still drive `analyzeComponentSchemas` and the report, so this never
+ * hides a real breaking change. OpenAPI 3.1 supports the full JSON Schema
+ * vocabulary, so specs declaring it are returned untouched.
+ */
+export function normalizeSpecForOpenApiDiff(
+  spec: Record<string, unknown>
+): Record<string, unknown> {
+  const version = typeof spec.openapi === 'string' ? spec.openapi : '';
+  if (!version.startsWith('3.0')) return spec;
+
+  const clone = structuredClone(spec);
+
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+    if (!isRecord(node)) return;
+
+    // OpenAPI 3.0 has no `propertyNames` keyword.
+    delete node.propertyNames;
+
+    // `anyOf`/`oneOf` with a `{ type: 'null' }` branch means "nullable".
+    for (const key of ['anyOf', 'oneOf']) {
+      const branches = node[key];
+      if (!Array.isArray(branches)) continue;
+      const kept = branches.filter((branch) => !isNullSchema(branch));
+      if (kept.length === branches.length) continue;
+      node[key] = kept;
+      node.nullable = true;
+      // A single remaining branch with no sibling keywords collapses cleanly
+      // onto the parent, matching how the 3.0 generator emits nullable schemas.
+      if (
+        kept.length === 1 &&
+        Object.keys(node).every((k) => k === key || k === 'nullable')
+      ) {
+        Object.assign(node, kept[0]);
+        delete node[key];
+      }
+    }
+
+    // `type: ['string', 'null']` means the same thing.
+    if (Array.isArray(node.type)) {
+      const types = node.type.filter((type) => type !== 'null');
+      if (types.length !== node.type.length) {
+        node.nullable = true;
+        if (types.length === 0) delete node.type;
+        else node.type = types;
+      }
+    }
+
+    for (const value of Object.values(node)) visit(value);
+  };
+
+  visit(clone);
+  return clone;
+}
+
 /** Recursively flags breaking changes between two component-schema definitions. */
 function diffSchemaNode(
   base: unknown,
@@ -521,16 +605,22 @@ export async function checkOpenApiBreakingChanges(
     );
   }
 
+  // `openapi-diff` validates the specs against the OpenAPI meta-schema before
+  // diffing, so hand it copies whose keywords its target version can parse.
+  // The raw specs still drive the schema analyzer and the report below.
+  const baseSpecForDiff = normalizeSpecForOpenApiDiff(baseSpec);
+  const headSpecForDiff = normalizeSpecForOpenApiDiff(headSpec);
+
   let outcome: import('openapi-diff').DiffOutcome;
   try {
     outcome = (await openApiDiff.diffSpecs({
       sourceSpec: {
-        content: JSON.stringify(baseSpec),
+        content: JSON.stringify(baseSpecForDiff),
         location: 'base',
         format: 'openapi3',
       },
       destinationSpec: {
-        content: JSON.stringify(headSpec),
+        content: JSON.stringify(headSpecForDiff),
         location: 'head',
         format: 'openapi3',
       },
