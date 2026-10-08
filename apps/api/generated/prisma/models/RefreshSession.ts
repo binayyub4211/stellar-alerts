@@ -338,7 +338,7 @@ export type RefreshSessionCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutRefreshSessionsInput
-  history?: Prisma.RefreshTokenHistoryCreateNestedManyWithoutSessionInput
+  history?: Prisma.RefreshTokenHistoryCreateNestedManyWithoutFamilyInput
 }
 
 export type RefreshSessionUncheckedCreateInput = {
@@ -352,7 +352,7 @@ export type RefreshSessionUncheckedCreateInput = {
   expiresAt: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
-  history?: Prisma.RefreshTokenHistoryUncheckedCreateNestedManyWithoutSessionInput
+  history?: Prisma.RefreshTokenHistoryUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type RefreshSessionUpdateInput = {
@@ -366,7 +366,7 @@ export type RefreshSessionUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutRefreshSessionsNestedInput
-  history?: Prisma.RefreshTokenHistoryUpdateManyWithoutSessionNestedInput
+  history?: Prisma.RefreshTokenHistoryUpdateManyWithoutFamilyNestedInput
 }
 
 export type RefreshSessionUncheckedUpdateInput = {
@@ -380,7 +380,7 @@ export type RefreshSessionUncheckedUpdateInput = {
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  history?: Prisma.RefreshTokenHistoryUncheckedUpdateManyWithoutSessionNestedInput
+  history?: Prisma.RefreshTokenHistoryUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type RefreshSessionCreateManyInput = {
@@ -549,7 +549,7 @@ export type RefreshSessionCreateWithoutUserInput = {
   expiresAt: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
-  history?: Prisma.RefreshTokenHistoryCreateNestedManyWithoutSessionInput
+  history?: Prisma.RefreshTokenHistoryCreateNestedManyWithoutFamilyInput
 }
 
 export type RefreshSessionUncheckedCreateWithoutUserInput = {
@@ -562,7 +562,7 @@ export type RefreshSessionUncheckedCreateWithoutUserInput = {
   expiresAt: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
-  history?: Prisma.RefreshTokenHistoryUncheckedCreateNestedManyWithoutSessionInput
+  history?: Prisma.RefreshTokenHistoryUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type RefreshSessionCreateOrConnectWithoutUserInput = {
@@ -697,7 +697,7 @@ export type RefreshSessionUpdateWithoutUserInput = {
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  history?: Prisma.RefreshTokenHistoryUpdateManyWithoutSessionNestedInput
+  history?: Prisma.RefreshTokenHistoryUpdateManyWithoutFamilyNestedInput
 }
 
 export type RefreshSessionUncheckedUpdateWithoutUserInput = {
@@ -710,7 +710,7 @@ export type RefreshSessionUncheckedUpdateWithoutUserInput = {
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  history?: Prisma.RefreshTokenHistoryUncheckedUpdateManyWithoutSessionNestedInput
+  history?: Prisma.RefreshTokenHistoryUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type RefreshSessionUncheckedUpdateManyWithoutUserInput = {
