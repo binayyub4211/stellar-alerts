@@ -2,7 +2,15 @@ import crypto from 'crypto';
 
 import { prisma } from '../../lib/prisma';
 import { KeyRotationManager } from '../../utils/key-rotation-manager';
-import { cryptoVault, joinEncryptedSecretParts, splitEncryptedSecret } from '../../utils/crypto-vault';
+import { cryptoVault } from '../../utils/crypto-vault';
+import { validateUrlForSsrf, ssrfSafeFetch } from '../../utils/ssrf';
+import {
+  buildCursorWhere,
+  buildCursorPage,
+  CURSOR_ORDER_BY,
+  CursorError,
+} from '../../utils/pagination';
+import { dynamicPayloadTransformer, PayloadTransformationRule } from './payload-transformer';
 
 export interface WebhookTestResult {
   success: boolean;
@@ -66,18 +74,21 @@ export class WebhooksService {
   async addWebhook(userId: string, url: string, payloadTemplate?: string) {
     console.log(`[WebhooksService] Registering webhook ${url} for user ${userId}`);
 
+    // SSRF-safe destination validation (#312)
+    await validateUrlForSsrf(url);
+
     const secret = crypto.randomBytes(32).toString('hex');
     const encryptedSecret = cryptoVault.encrypt(secret);
-    const { secretCiphertext, secretIv, secretAuthTag, keyVersion } = splitEncryptedSecret(encryptedSecret);
+    const [version, iv, authTag, ciphertext] = encryptedSecret.split(':');
 
     const webhook = await prisma.webhook.create({
       data: {
         userId,
         url,
-        secretCiphertext,
-        secretIv,
-        secretAuthTag,
-        keyVersion,
+        secretCiphertext: ciphertext,
+        secretIv: iv,
+        secretAuthTag: authTag,
+        keyVersion: parseInt(version, 10),
         payloadTemplate,
       },
       select: {
@@ -146,6 +157,49 @@ export class WebhooksService {
     });
   }
 
+  /**
+   * Returns a cursor-paginated list of delivery logs for a specific webhook.
+   * Only returns logs for webhooks owned by `userId` — ownership is verified
+   * before the log query so a user can never read another user's logs by
+   * guessing a webhookId.
+   *
+   * Stable ordering: createdAt DESC, id DESC.
+   */
+  async getWebhookLogs(webhookId: string, userId: string, limit: number = 20, cursor?: string) {
+    // Verify ownership
+    const webhook = await prisma.webhook.findFirst({
+      where: { id: webhookId, userId },
+      select: { id: true },
+    });
+    if (!webhook) {
+      throw new Error('Webhook not found');
+    }
+
+    const where: Record<string, any> = { webhookId };
+
+    if (cursor) {
+      const cursorWhere = buildCursorWhere(cursor);
+      Object.assign(where, cursorWhere);
+    }
+
+    const rows = await prisma.webhookLog.findMany({
+      where,
+      orderBy: CURSOR_ORDER_BY,
+      take: limit + 1,
+      select: {
+        id: true,
+        webhookId: true,
+        statusCode: true,
+        responseBody: true,
+        error: true,
+        sentAt: true,
+        createdAt: true,
+      },
+    });
+
+    return buildCursorPage(rows, limit);
+  }
+
   async removeWebhook(id: string, userId: string) {
     const deleted = await prisma.webhook.deleteMany({
       where: { id, userId },
@@ -165,16 +219,28 @@ export class WebhooksService {
       throw new Error('Webhook not found');
     }
 
-    const secret = cryptoVault.decrypt(joinEncryptedSecretParts(webhook));
+    const encrypted = [
+      String(webhook.keyVersion),
+      webhook.secretIv,
+      webhook.secretAuthTag,
+      webhook.secretCiphertext,
+    ].join(':');
+    const secret = cryptoVault.decrypt(encrypted);
 
-    const payload = JSON.stringify({
+    let rawPayload: Record<string, any> = {
       event: 'webhook.ping',
       timestamp: new Date().toISOString(),
       data: {
         webhookId: webhook.id,
         message: 'Test ping dispatched from Stellar Alerts',
       },
-    });
+    };
+
+    if (webhook.payloadTemplate) {
+      rawPayload = dynamicPayloadTransformer.transform(rawPayload, webhook.payloadTemplate);
+    }
+
+    const payload = JSON.stringify(rawPayload);
 
     if (!this.keyRotationManager.getKeyState(webhook.id)) {
       this.keyRotationManager.setKeyState(webhook.id, { activeSecret: secret });
@@ -191,7 +257,7 @@ export class WebhooksService {
     }
 
     try {
-      const response = await fetch(webhook.url, {
+      const response = await ssrfSafeFetch(webhook.url, {
         method: 'POST',
         headers,
         body: payload,

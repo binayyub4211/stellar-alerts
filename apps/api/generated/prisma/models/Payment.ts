@@ -259,6 +259,8 @@ export type PaymentWhereInput = {
   wallet?: Prisma.XOR<Prisma.WalletScalarRelationFilter, Prisma.WalletWhereInput>
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptListRelationFilter
   deadLetters?: Prisma.DeadLetterListRelationFilter
+  deliveries?: Prisma.NotificationDeliveryListRelationFilter
+  checksum?: Prisma.XOR<Prisma.PaymentChecksumNullableScalarRelationFilter, Prisma.PaymentChecksumWhereInput> | null
 }
 
 export type PaymentOrderByWithRelationInput = {
@@ -275,6 +277,8 @@ export type PaymentOrderByWithRelationInput = {
   wallet?: Prisma.WalletOrderByWithRelationInput
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptOrderByRelationAggregateInput
   deadLetters?: Prisma.DeadLetterOrderByRelationAggregateInput
+  deliveries?: Prisma.NotificationDeliveryOrderByRelationAggregateInput
+  checksum?: Prisma.PaymentChecksumOrderByWithRelationInput
 }
 
 export type PaymentWhereUniqueInput = Prisma.AtLeast<{
@@ -294,6 +298,8 @@ export type PaymentWhereUniqueInput = Prisma.AtLeast<{
   wallet?: Prisma.XOR<Prisma.WalletScalarRelationFilter, Prisma.WalletWhereInput>
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptListRelationFilter
   deadLetters?: Prisma.DeadLetterListRelationFilter
+  deliveries?: Prisma.NotificationDeliveryListRelationFilter
+  checksum?: Prisma.XOR<Prisma.PaymentChecksumNullableScalarRelationFilter, Prisma.PaymentChecksumWhereInput> | null
 }, "id" | "txHash">
 
 export type PaymentOrderByWithAggregationInput = {
@@ -343,6 +349,8 @@ export type PaymentCreateInput = {
   wallet: Prisma.WalletCreateNestedOneWithoutPaymentsInput
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutPaymentInput
   deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateInput = {
@@ -358,6 +366,8 @@ export type PaymentUncheckedCreateInput = {
   createdAt?: Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutPaymentInput
   deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUpdateInput = {
@@ -373,6 +383,8 @@ export type PaymentUpdateInput = {
   wallet?: Prisma.WalletUpdateOneRequiredWithoutPaymentsNestedInput
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutPaymentNestedInput
   deadLetters?: Prisma.DeadLetterUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateInput = {
@@ -388,6 +400,8 @@ export type PaymentUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutPaymentNestedInput
   deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentCreateManyInput = {
@@ -485,6 +499,11 @@ export type PaymentSumOrderByAggregateInput = {
   amount?: Prisma.SortOrder
 }
 
+export type PaymentScalarRelationFilter = {
+  is?: Prisma.PaymentWhereInput
+  isNot?: Prisma.PaymentWhereInput
+}
+
 export type PaymentNullableScalarRelationFilter = {
   is?: Prisma.PaymentWhereInput | null
   isNot?: Prisma.PaymentWhereInput | null
@@ -540,6 +559,34 @@ export type DecimalFieldUpdateOperationsInput = {
   divide?: runtime.Decimal | runtime.DecimalJsLike | number | string
 }
 
+export type PaymentCreateNestedOneWithoutChecksumInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutChecksumInput, Prisma.PaymentUncheckedCreateWithoutChecksumInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutChecksumInput
+  connect?: Prisma.PaymentWhereUniqueInput
+}
+
+export type PaymentUpdateOneRequiredWithoutChecksumNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutChecksumInput, Prisma.PaymentUncheckedCreateWithoutChecksumInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutChecksumInput
+  upsert?: Prisma.PaymentUpsertWithoutChecksumInput
+  connect?: Prisma.PaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutChecksumInput, Prisma.PaymentUpdateWithoutChecksumInput>, Prisma.PaymentUncheckedUpdateWithoutChecksumInput>
+}
+
+export type PaymentCreateNestedOneWithoutDeliveriesInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutDeliveriesInput, Prisma.PaymentUncheckedCreateWithoutDeliveriesInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutDeliveriesInput
+  connect?: Prisma.PaymentWhereUniqueInput
+}
+
+export type PaymentUpdateOneRequiredWithoutDeliveriesNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutDeliveriesInput, Prisma.PaymentUncheckedCreateWithoutDeliveriesInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutDeliveriesInput
+  upsert?: Prisma.PaymentUpsertWithoutDeliveriesInput
+  connect?: Prisma.PaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutDeliveriesInput, Prisma.PaymentUpdateWithoutDeliveriesInput>, Prisma.PaymentUncheckedUpdateWithoutDeliveriesInput>
+}
+
 export type PaymentCreateNestedOneWithoutDeliveryAttemptsInput = {
   create?: Prisma.XOR<Prisma.PaymentCreateWithoutDeliveryAttemptsInput, Prisma.PaymentUncheckedCreateWithoutDeliveryAttemptsInput>
   connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutDeliveryAttemptsInput
@@ -584,6 +631,8 @@ export type PaymentCreateWithoutWalletInput = {
   createdAt?: Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutPaymentInput
   deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutWalletInput = {
@@ -598,6 +647,8 @@ export type PaymentUncheckedCreateWithoutWalletInput = {
   createdAt?: Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutPaymentInput
   deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutWalletInput = {
@@ -642,6 +693,166 @@ export type PaymentScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Payment"> | Date | string
 }
 
+export type PaymentCreateWithoutChecksumInput = {
+  id?: string
+  txHash: string
+  fromAddress: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset: string
+  assetIssuer?: string | null
+  memo?: string | null
+  receivedAt: Date | string
+  createdAt?: Date | string
+  wallet: Prisma.WalletCreateNestedOneWithoutPaymentsInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutPaymentInput
+  deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentUncheckedCreateWithoutChecksumInput = {
+  id?: string
+  walletId: string
+  txHash: string
+  fromAddress: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset: string
+  assetIssuer?: string | null
+  memo?: string | null
+  receivedAt: Date | string
+  createdAt?: Date | string
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutPaymentInput
+  deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentCreateOrConnectWithoutChecksumInput = {
+  where: Prisma.PaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutChecksumInput, Prisma.PaymentUncheckedCreateWithoutChecksumInput>
+}
+
+export type PaymentUpsertWithoutChecksumInput = {
+  update: Prisma.XOR<Prisma.PaymentUpdateWithoutChecksumInput, Prisma.PaymentUncheckedUpdateWithoutChecksumInput>
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutChecksumInput, Prisma.PaymentUncheckedCreateWithoutChecksumInput>
+  where?: Prisma.PaymentWhereInput
+}
+
+export type PaymentUpdateToOneWithWhereWithoutChecksumInput = {
+  where?: Prisma.PaymentWhereInput
+  data: Prisma.XOR<Prisma.PaymentUpdateWithoutChecksumInput, Prisma.PaymentUncheckedUpdateWithoutChecksumInput>
+}
+
+export type PaymentUpdateWithoutChecksumInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset?: Prisma.StringFieldUpdateOperationsInput | string
+  assetIssuer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallet?: Prisma.WalletUpdateOneRequiredWithoutPaymentsNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutPaymentNestedInput
+  deadLetters?: Prisma.DeadLetterUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentUncheckedUpdateWithoutChecksumInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  walletId?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset?: Prisma.StringFieldUpdateOperationsInput | string
+  assetIssuer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutPaymentNestedInput
+  deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentCreateWithoutDeliveriesInput = {
+  id?: string
+  txHash: string
+  fromAddress: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset: string
+  assetIssuer?: string | null
+  memo?: string | null
+  receivedAt: Date | string
+  createdAt?: Date | string
+  wallet: Prisma.WalletCreateNestedOneWithoutPaymentsInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutPaymentInput
+  deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumCreateNestedOneWithoutPaymentInput
+}
+
+export type PaymentUncheckedCreateWithoutDeliveriesInput = {
+  id?: string
+  walletId: string
+  txHash: string
+  fromAddress: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset: string
+  assetIssuer?: string | null
+  memo?: string | null
+  receivedAt: Date | string
+  createdAt?: Date | string
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutPaymentInput
+  deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumUncheckedCreateNestedOneWithoutPaymentInput
+}
+
+export type PaymentCreateOrConnectWithoutDeliveriesInput = {
+  where: Prisma.PaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutDeliveriesInput, Prisma.PaymentUncheckedCreateWithoutDeliveriesInput>
+}
+
+export type PaymentUpsertWithoutDeliveriesInput = {
+  update: Prisma.XOR<Prisma.PaymentUpdateWithoutDeliveriesInput, Prisma.PaymentUncheckedUpdateWithoutDeliveriesInput>
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutDeliveriesInput, Prisma.PaymentUncheckedCreateWithoutDeliveriesInput>
+  where?: Prisma.PaymentWhereInput
+}
+
+export type PaymentUpdateToOneWithWhereWithoutDeliveriesInput = {
+  where?: Prisma.PaymentWhereInput
+  data: Prisma.XOR<Prisma.PaymentUpdateWithoutDeliveriesInput, Prisma.PaymentUncheckedUpdateWithoutDeliveriesInput>
+}
+
+export type PaymentUpdateWithoutDeliveriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset?: Prisma.StringFieldUpdateOperationsInput | string
+  assetIssuer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallet?: Prisma.WalletUpdateOneRequiredWithoutPaymentsNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutPaymentNestedInput
+  deadLetters?: Prisma.DeadLetterUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUpdateOneWithoutPaymentNestedInput
+}
+
+export type PaymentUncheckedUpdateWithoutDeliveriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  walletId?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.StringFieldUpdateOperationsInput | string
+  fromAddress?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  asset?: Prisma.StringFieldUpdateOperationsInput | string
+  assetIssuer?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutPaymentNestedInput
+  deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUncheckedUpdateOneWithoutPaymentNestedInput
+}
+
 export type PaymentCreateWithoutDeliveryAttemptsInput = {
   id?: string
   txHash: string
@@ -654,6 +865,8 @@ export type PaymentCreateWithoutDeliveryAttemptsInput = {
   createdAt?: Date | string
   wallet: Prisma.WalletCreateNestedOneWithoutPaymentsInput
   deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutDeliveryAttemptsInput = {
@@ -668,6 +881,8 @@ export type PaymentUncheckedCreateWithoutDeliveryAttemptsInput = {
   receivedAt: Date | string
   createdAt?: Date | string
   deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutDeliveryAttemptsInput = {
@@ -698,6 +913,8 @@ export type PaymentUpdateWithoutDeliveryAttemptsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallet?: Prisma.WalletUpdateOneRequiredWithoutPaymentsNestedInput
   deadLetters?: Prisma.DeadLetterUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutDeliveryAttemptsInput = {
@@ -712,6 +929,8 @@ export type PaymentUncheckedUpdateWithoutDeliveryAttemptsInput = {
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentCreateWithoutDeadLettersInput = {
@@ -726,6 +945,8 @@ export type PaymentCreateWithoutDeadLettersInput = {
   createdAt?: Date | string
   wallet: Prisma.WalletCreateNestedOneWithoutPaymentsInput
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutDeadLettersInput = {
@@ -740,6 +961,8 @@ export type PaymentUncheckedCreateWithoutDeadLettersInput = {
   receivedAt: Date | string
   createdAt?: Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutPaymentInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutPaymentInput
+  checksum?: Prisma.PaymentChecksumUncheckedCreateNestedOneWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutDeadLettersInput = {
@@ -770,6 +993,8 @@ export type PaymentUpdateWithoutDeadLettersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallet?: Prisma.WalletUpdateOneRequiredWithoutPaymentsNestedInput
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutDeadLettersInput = {
@@ -784,6 +1009,8 @@ export type PaymentUncheckedUpdateWithoutDeadLettersInput = {
   receivedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentCreateManyWalletInput = {
@@ -810,6 +1037,8 @@ export type PaymentUpdateWithoutWalletInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutPaymentNestedInput
   deadLetters?: Prisma.DeadLetterUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutWalletInput = {
@@ -824,6 +1053,8 @@ export type PaymentUncheckedUpdateWithoutWalletInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutPaymentNestedInput
   deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutPaymentNestedInput
+  deliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutPaymentNestedInput
+  checksum?: Prisma.PaymentChecksumUncheckedUpdateOneWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutWalletInput = {
@@ -846,11 +1077,13 @@ export type PaymentUncheckedUpdateManyWithoutWalletInput = {
 export type PaymentCountOutputType = {
   deliveryAttempts: number
   deadLetters: number
+  deliveries: number
 }
 
 export type PaymentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   deliveryAttempts?: boolean | PaymentCountOutputTypeCountDeliveryAttemptsArgs
   deadLetters?: boolean | PaymentCountOutputTypeCountDeadLettersArgs
+  deliveries?: boolean | PaymentCountOutputTypeCountDeliveriesArgs
 }
 
 /**
@@ -877,6 +1110,13 @@ export type PaymentCountOutputTypeCountDeadLettersArgs<ExtArgs extends runtime.T
   where?: Prisma.DeadLetterWhereInput
 }
 
+/**
+ * PaymentCountOutputType without action
+ */
+export type PaymentCountOutputTypeCountDeliveriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.NotificationDeliveryWhereInput
+}
+
 
 export type PaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -892,6 +1132,8 @@ export type PaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   wallet?: boolean | Prisma.WalletDefaultArgs<ExtArgs>
   deliveryAttempts?: boolean | Prisma.Payment$deliveryAttemptsArgs<ExtArgs>
   deadLetters?: boolean | Prisma.Payment$deadLettersArgs<ExtArgs>
+  deliveries?: boolean | Prisma.Payment$deliveriesArgs<ExtArgs>
+  checksum?: boolean | Prisma.Payment$checksumArgs<ExtArgs>
   _count?: boolean | Prisma.PaymentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payment"]>
 
@@ -941,6 +1183,8 @@ export type PaymentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   wallet?: boolean | Prisma.WalletDefaultArgs<ExtArgs>
   deliveryAttempts?: boolean | Prisma.Payment$deliveryAttemptsArgs<ExtArgs>
   deadLetters?: boolean | Prisma.Payment$deadLettersArgs<ExtArgs>
+  deliveries?: boolean | Prisma.Payment$deliveriesArgs<ExtArgs>
+  checksum?: boolean | Prisma.Payment$checksumArgs<ExtArgs>
   _count?: boolean | Prisma.PaymentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PaymentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -956,6 +1200,8 @@ export type $PaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     wallet: Prisma.$WalletPayload<ExtArgs>
     deliveryAttempts: Prisma.$NotificationDeliveryAttemptPayload<ExtArgs>[]
     deadLetters: Prisma.$DeadLetterPayload<ExtArgs>[]
+    deliveries: Prisma.$NotificationDeliveryPayload<ExtArgs>[]
+    checksum: Prisma.$PaymentChecksumPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1365,6 +1611,8 @@ export interface Prisma__PaymentClient<T, Null = never, ExtArgs extends runtime.
   wallet<T extends Prisma.WalletDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WalletDefaultArgs<ExtArgs>>): Prisma.Prisma__WalletClient<runtime.Types.Result.GetResult<Prisma.$WalletPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   deliveryAttempts<T extends Prisma.Payment$deliveryAttemptsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$deliveryAttemptsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationDeliveryAttemptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deadLetters<T extends Prisma.Payment$deadLettersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$deadLettersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeadLetterPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  deliveries<T extends Prisma.Payment$deliveriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$deliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationDeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  checksum<T extends Prisma.Payment$checksumArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$checksumArgs<ExtArgs>>): Prisma.Prisma__PaymentChecksumClient<runtime.Types.Result.GetResult<Prisma.$PaymentChecksumPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1850,6 +2098,49 @@ export type Payment$deadLettersArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.DeadLetterScalarFieldEnum | Prisma.DeadLetterScalarFieldEnum[]
+}
+
+/**
+ * Payment.deliveries
+ */
+export type Payment$deliveriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the NotificationDelivery
+   */
+  select?: Prisma.NotificationDeliverySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the NotificationDelivery
+   */
+  omit?: Prisma.NotificationDeliveryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.NotificationDeliveryInclude<ExtArgs> | null
+  where?: Prisma.NotificationDeliveryWhereInput
+  orderBy?: Prisma.NotificationDeliveryOrderByWithRelationInput | Prisma.NotificationDeliveryOrderByWithRelationInput[]
+  cursor?: Prisma.NotificationDeliveryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.NotificationDeliveryScalarFieldEnum | Prisma.NotificationDeliveryScalarFieldEnum[]
+}
+
+/**
+ * Payment.checksum
+ */
+export type Payment$checksumArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PaymentChecksum
+   */
+  select?: Prisma.PaymentChecksumSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PaymentChecksum
+   */
+  omit?: Prisma.PaymentChecksumOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PaymentChecksumInclude<ExtArgs> | null
+  where?: Prisma.PaymentChecksumWhereInput
 }
 
 /**

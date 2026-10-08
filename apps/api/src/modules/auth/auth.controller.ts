@@ -1,9 +1,25 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { requestLinkSchema, verifyLinkSchema, telegramInitDataSchema, didChallengeSchema, didVerifySchema } from './auth.schema';
+import {
+  requestLinkSchema,
+  verifyLinkSchema,
+  telegramInitDataSchema,
+  didChallengeSchema,
+  didVerifySchema,
+  refreshTokenSchema,
+  revokeSessionSchema,
+} from './auth.schema';
 import { authService } from './auth.service';
 import { mfaService } from './mfa.service';
 import { TelegramInitDataError } from '../../utils/telegram';
+import { TokenReuseError, SessionRevokedError } from '../../lib/session-manager';
 import { createPublicKey, verify as cryptoVerify } from 'crypto';
+import {
+  AuthenticationError,
+  NotFoundError,
+  RateLimitError,
+  ValidationError,
+  zodValidationError,
+} from '../../lib/errors';
 
 const TRUSTED_KEY_IDS = ['key1', 'key2', 'key3'];
 
@@ -65,7 +81,7 @@ export class AuthController {
   async requestMagicLink(request: FastifyRequest, reply: FastifyReply) {
     const parsed = requestLinkSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid email', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid email');
     }
 
     const token = await authService.requestMagicLink(parsed.data.email);
@@ -79,7 +95,7 @@ export class AuthController {
   async verifyMagicLink(request: FastifyRequest, reply: FastifyReply) {
     const parsed = verifyLinkSchema.safeParse(request.query);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid token parameter', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid token parameter');
     }
 
     try {
@@ -87,37 +103,37 @@ export class AuthController {
       return reply.send({ success: true, token: sessionToken, user });
     } catch (error: any) {
       if (error.message === 'Invalid or expired token') {
-        return reply.status(401).send({ error: 'Invalid or expired token' });
+        throw new AuthenticationError('Invalid or expired token', 'INVALID_TOKEN');
       }
-      return reply.status(500).send({ error: 'Internal server error', message: error.message });
+      throw error;
     }
   }
 
   async requestDIDChallenge(request: FastifyRequest, reply: FastifyReply) {
     const parsed = didChallengeSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid DID parameter', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid DID parameter');
     }
 
     try {
       const challengeObj = await authService.requestDIDChallenge(parsed.data.did);
       return reply.send({ success: true, ...challengeObj });
     } catch (error: any) {
-      return reply.status(400).send({ error: error.message });
+      throw new ValidationError(error.message);
     }
   }
 
   async verifyDIDAuth(request: FastifyRequest, reply: FastifyReply) {
     const parsed = didVerifySchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Missing or invalid did, challenge, or signature parameters', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Missing or invalid did, challenge, or signature parameters');
     }
 
     try {
       const result = await authService.verifyDIDAuth(parsed.data.did, parsed.data.challenge, parsed.data.signature);
       return reply.send({ success: true, ...result });
     } catch (error: any) {
-      return reply.status(401).send({ error: 'DID Authentication failed', message: error.message });
+      throw new AuthenticationError(error.message, 'DID_AUTH_FAILED');
     }
   }
 
@@ -129,16 +145,16 @@ export class AuthController {
   async verifyTelegramInitData(request: FastifyRequest, reply: FastifyReply) {
     const parsed = telegramInitDataSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: 'Invalid initData parameter', details: parsed.error.format() });
+      throw zodValidationError(parsed, 'Invalid initData parameter');
     }
 
     const initData = parsed.data.initData.trim();
     if (!initData.includes('hash=')) {
-      return reply.status(400).send({
-        error: 'Telegram authentication failed',
-        code: 'MISSING_HASH',
-        message: 'initData is missing the HMAC hash field required for WebApp validation.',
-      });
+      throw new ValidationError(
+        'initData is missing the HMAC hash field required for WebApp validation.',
+        undefined,
+        'MISSING_HASH',
+      );
     }
 
     try {
@@ -150,20 +166,18 @@ export class AuthController {
       });
     } catch (error: any) {
       if (error instanceof TelegramInitDataError) {
-        const status = error.code === 'INVALID_SIGNATURE' || error.code === 'EXPIRED' ? 401 : 400;
-        return reply.status(status).send({
-          error: 'Telegram authentication failed',
-          code: error.code,
-          message: error.message,
-        });
+        if (error.code === 'INVALID_SIGNATURE' || error.code === 'EXPIRED') {
+          throw new AuthenticationError(error.message, error.code);
+        }
+        throw new ValidationError(error.message, undefined, error.code);
       }
-      return reply.status(500).send({ error: 'Internal server error', message: error.message });
+      throw error;
     }
   }
 
   async getMe(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+      throw new AuthenticationError('User not authenticated');
     }
 
     try {
@@ -171,23 +185,63 @@ export class AuthController {
       return reply.send({ success: true, user });
     } catch (error: any) {
       if (error.message === 'User not found') {
-        return reply.status(404).send({ error: 'Not found', message: 'User not found' });
+        throw new NotFoundError('User not found');
       }
-      return reply.status(500).send({ error: 'Internal server error', message: error.message });
+      throw error;
     }
+  }
+
+  async refreshTokens(request: FastifyRequest, reply: FastifyReply) {
+    const parsed = refreshTokenSchema.safeParse(request.body);
+    if (!parsed.success) {
+      throw zodValidationError(parsed, 'Missing or invalid refreshToken parameter');
+    }
+
+    try {
+      const result = await authService.rotateRefreshToken(parsed.data.refreshToken, {
+        ip: request.ip,
+        userAgent: request.headers['user-agent'] as string | undefined,
+      });
+      return reply.send({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      if (error instanceof TokenReuseError || error instanceof SessionRevokedError) {
+        throw new AuthenticationError(error.message, error.code);
+      }
+      if (error.message === 'Invalid or expired refresh token') {
+        throw new AuthenticationError(error.message, 'INVALID_TOKEN');
+      }
+      throw error;
+    }
+  }
+
+  async revokeSession(request: FastifyRequest, reply: FastifyReply) {
+    if (!request.user) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    const parsed = revokeSessionSchema.safeParse(request.body);
+    const targetFamilyId = (parsed.success && parsed.data.familyId) || request.user.familyId;
+
+    if (targetFamilyId && targetFamilyId !== 'legacy') {
+      await authService.revokeSessionFamily(targetFamilyId);
+    }
+    await authService.revokeSession(request.user);
+    return reply.send({
+      success: true,
+      message: 'Session family revoked successfully.',
+    });
   }
 
   async logout(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+      throw new AuthenticationError('User not authenticated');
     }
 
-    try {
-      await authService.revokeSession(request.user);
-      return reply.send({ success: true, message: 'Logged out successfully.' });
-    } catch (error: any) {
-      return reply.status(500).send({ error: 'Internal server error', message: error.message });
-    }
+    await authService.revokeSession(request.user);
+    return reply.send({ success: true, message: 'Logged out successfully.' });
   }
 
   // ========== MFA Endpoints ==========
@@ -197,43 +251,40 @@ export class AuthController {
    */
   async setupMFA(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      throw new AuthenticationError('User not authenticated');
     }
 
-    try {
-      const { secret, qrCode } = await mfaService.setupMFA(request.user.id, request.user.email);
-      return reply.send({
-        success: true,
-        secret,
-        qrCode,
-        message: 'Scan QR code with your authenticator app and verify with a 6-digit code',
-      });
-    } catch (error: any) {
-      return reply.status(500).send({ error: 'Failed to setup MFA', message: error.message });
-    }
+    const { secret, qrCode } = await mfaService.setupMFA(request.user.id, request.user.email);
+    return reply.send({
+      success: true,
+      secret,
+      qrCode,
+      message: 'Scan QR code with your authenticator app and verify with a 6-digit code',
+    });
   }
 
   /**
-   * Enable MFA - Verify first TOTP token
+   * Enable MFA - Verify first TOTP token and generate recovery codes
    */
   async enableMFA(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      throw new AuthenticationError('User not authenticated');
     }
 
     const { token } = (request.body as any) || {};
     if (!token || typeof token !== 'string') {
-      return reply.status(400).send({ error: 'Missing or invalid token' });
+      throw new ValidationError('Missing or invalid token');
     }
 
     try {
-      await mfaService.enableMFA(request.user.id, token);
+      const result = await mfaService.enableMFA(request.user.id, token);
       return reply.send({
         success: true,
         message: 'MFA enabled successfully',
+        recoveryCodes: result.recoveryCodes,
       });
     } catch (error: any) {
-      return reply.status(400).send({ error: 'Failed to enable MFA', message: error.message });
+      throw new ValidationError(error.message, undefined, 'MFA_ENABLE_FAILED');
     }
   }
 
@@ -242,12 +293,12 @@ export class AuthController {
    */
   async disableMFA(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      throw new AuthenticationError('User not authenticated');
     }
 
     const { token } = (request.body as any) || {};
     if (!token || typeof token !== 'string') {
-      return reply.status(400).send({ error: 'Missing or invalid token' });
+      throw new ValidationError('Missing or invalid token');
     }
 
     try {
@@ -257,7 +308,7 @@ export class AuthController {
         message: 'MFA disabled successfully',
       });
     } catch (error: any) {
-      return reply.status(400).send({ error: 'Failed to disable MFA', message: error.message });
+      throw new ValidationError(error.message, undefined, 'MFA_DISABLE_FAILED');
     }
   }
 
@@ -266,17 +317,85 @@ export class AuthController {
    */
   async getMFAStatus(request: FastifyRequest, reply: FastifyReply) {
     if (!request.user) {
-      return reply.status(401).send({ error: 'Unauthorized' });
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    const enabled = await mfaService.isMFAEnabled(request.user.id);
+    const codeStatus = enabled
+      ? await mfaService.getRecoveryCodeStatus(request.user.id)
+      : { total: 0, remaining: 0 };
+
+    return reply.send({
+      success: true,
+      mfaEnabled: enabled,
+      recoveryCodesRemaining: codeStatus.remaining,
+      recoveryCodesTotal: codeStatus.total,
+    });
+  }
+
+  /**
+   * Generate/Regenerate one-time recovery codes (#317)
+   */
+  async generateRecoveryCodes(request: FastifyRequest, reply: FastifyReply) {
+    if (!request.user) {
+      throw new AuthenticationError('User not authenticated');
     }
 
     try {
-      const enabled = await mfaService.isMFAEnabled(request.user.id);
+      const codes = await mfaService.generateRecoveryCodes(request.user.id);
       return reply.send({
         success: true,
-        mfaEnabled: enabled,
+        recoveryCodes: codes,
+        message: 'New recovery codes generated. Store them securely; they will not be shown again.',
       });
     } catch (error: any) {
-      return reply.status(500).send({ error: 'Failed to check MFA status', message: error.message });
+      throw new ValidationError(error.message, undefined, 'RECOVERY_CODE_GENERATION_FAILED');
+    }
+  }
+
+  /**
+   * Get remaining recovery codes count (#317)
+   */
+  async getRecoveryCodeStatus(request: FastifyRequest, reply: FastifyReply) {
+    if (!request.user) {
+      throw new AuthenticationError('User not authenticated');
+    }
+
+    const status = await mfaService.getRecoveryCodeStatus(request.user.id);
+    return reply.send({
+      success: true,
+      ...status,
+    });
+  }
+
+  /**
+   * Recover account with a one-time recovery code when device is lost (#317)
+   */
+  async recoverAccount(request: FastifyRequest, reply: FastifyReply) {
+    const { email, recoveryCode } = (request.body as any) || {};
+
+    if (!email || typeof email !== 'string') {
+      throw new ValidationError('Missing or invalid email');
+    }
+    if (!recoveryCode || typeof recoveryCode !== 'string') {
+      throw new ValidationError('Missing or invalid recovery code');
+    }
+
+    try {
+      const result = await mfaService.recoverAccountWithCode(
+        email,
+        recoveryCode,
+        request.ip,
+      );
+      return reply.send({
+        success: true,
+        ...result,
+      });
+    } catch (error: any) {
+      if (error.message.includes('Too many recovery attempts')) {
+        throw new RateLimitError(error.message);
+      }
+      throw new ValidationError(error.message, undefined, 'RECOVERY_FAILED');
     }
   }
 }

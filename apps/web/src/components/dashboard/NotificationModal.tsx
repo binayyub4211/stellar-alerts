@@ -17,13 +17,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   const [mfaRequired, setMfaRequired] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      checkMFAStatus();
-    }
-  }, [isOpen]);
-
-  const checkMFAStatus = async () => {
+  const checkMFAStatus = async (isMounted: () => boolean) => {
+    if (typeof window === 'undefined' || !isMounted()) return;
     try {
       const token = localStorage.getItem('sessionToken');
       const headers: Record<string, string> = {};
@@ -31,13 +26,33 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
       const res = await fetch('http://localhost:3001/auth/mfa/status', { headers });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && isMounted() && typeof window !== 'undefined') {
         setMfaRequired(data.mfaEnabled);
       }
-    } catch (error) {
-      console.error('Failed to check MFA status:', error);
+    } catch {
+      // Ignore network errors during test teardown or unmount
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    if (isOpen) {
+      void checkMFAStatus(() => mounted);
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -60,14 +75,20 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="notification-modal-title"
+    >
       <div className="w-full max-w-md p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <h3 id="notification-modal-title" className="text-lg font-bold text-white flex items-center gap-2">
             <span>🔔</span> Alert Channels &amp; Preferences
           </h3>
           <button
             onClick={onClose}
+            aria-label="Close preferences modal"
             className="text-slate-400 hover:text-white transition-colors"
           >
             ✕

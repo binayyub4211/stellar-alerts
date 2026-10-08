@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import { createLogger } from './logger';
 import type { DeliveryChannel } from './delivery';
+import { maskDestination, sanitizePayload } from '../utils/privacy';
 
 const deadLetterLog = createLogger({ module: 'DeadLetter' });
 
@@ -16,6 +17,11 @@ export interface DeadLetterCapture {
   destination?: string | null;
   payload?: unknown;
   error: string;
+  failureClass?: 'retryable' | 'permanent' | string;
+  failureReason?: string | null;
+  jobId?: string | null;
+  attemptsMade?: number;
+  maxAttempts?: number | null;
 }
 
 /**
@@ -42,10 +48,16 @@ export async function persistDeadLetter(input: DeadLetterCapture): Promise<strin
         userId: input.userId ?? null,
         channel: input.channel,
         destination: input.destination ?? null,
-        payload: (input.payload ?? undefined) as any,
+        payload: (input.payload ? sanitizePayload(input.payload) : undefined) as any,
         error: input.error ? input.error.substring(0, 4000) : 'Unknown error',
         status: 'pending',
-      },
+        failureClass: input.failureClass ?? 'permanent',
+        failureReason: input.failureReason ?? null,
+        jobId: input.jobId ?? null,
+        attemptsMade: input.attemptsMade ?? 0,
+        maxAttempts: input.maxAttempts ?? null,
+        quarantinedAt: new Date(),
+      } as any,
       select: { id: true },
     });
     deadLetterLog.warn(
