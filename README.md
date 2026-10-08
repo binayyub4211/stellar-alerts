@@ -115,7 +115,7 @@ npm run validate:dependabot
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 - **Development Roadmap**: See **[ROADMAP.md](ROADMAP.md)**.
 - **Soroban Smart Contract**: See **[contracts/alert_registry/README.md](contracts/alert_registry/README.md)**.
-- **Idempotency Keys**: See **[docs/idempotency-keys.md](docs/idempotency-keys.md)** — retry-safe mutations on `POST`/`DELETE` routes, and how to guard a new route.
+- **Slack Slash Commands (`/stellar`)**: See **[docs/SLACK_SLASH_COMMANDS.md](docs/SLACK_SLASH_COMMANDS.md)**.
 
 ---
 

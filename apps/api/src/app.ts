@@ -24,6 +24,7 @@ import { notificationsRoutes } from './modules/notifications/notifications.route
 import { alertRulesRoutes } from './modules/alert-rules/alert-rules.routes';
 import { deadLettersRoutes } from './modules/dead-letters/dead-letters.routes';
 import { discordInteractionsRoutes } from './modules/discord-interactions';
+import { slackRoutes } from './modules/slack/slack.routes';
 import { graphqlRoutes } from './modules/graphql/graphql.routes';
 import { exportsRoutes } from './modules/exports/exports.routes';
 import { simulationRoutes } from './modules/simulation/simulation.routes';
@@ -138,6 +139,7 @@ export const buildApp = async () => {
   app.register(notificationsRoutes);
   app.register(alertRulesRoutes);
   app.register(deadLettersRoutes);
+  app.register(slackRoutes);
 await app.register(graphqlRoutes);
   app.register(exportsRoutes);
   app.register(simulationRoutes);
