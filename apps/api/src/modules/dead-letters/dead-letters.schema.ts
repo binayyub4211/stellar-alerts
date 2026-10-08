@@ -1,7 +1,14 @@
 import { z } from 'zod';
+import { cursorSchema, limitSchema } from '../../utils/pagination';
 
+// Prisma IDs are CUIDs (model id fields use `@default(cuid())`), so route
+// params must be strict CUIDs: `c` prefix + base36 lowercase. Anything else
+// ('' , 'invalid-id', '123', 'not-a-cuid', over-long strings) fails schema
+// validation → 400 VALIDATION_ERROR instead of a misleading 404.
 export const deadLetterIdSchema = z.object({
-  id: z.string().min(1),
+  id: z
+    .string()
+    .regex(/^c[a-z0-9]{24,}$/, 'Invalid dead letter id'),
 });
 
 export const listDeadLettersQuerySchema = z.object({
@@ -9,8 +16,8 @@ export const listDeadLettersQuerySchema = z.object({
   status: z.enum(['pending', 'retried', 'suppressed']).optional(),
   q: z.string().max(200).optional(),
   maxAgeDays: z.coerce.number().int().min(1).max(365).optional(),
-  page: z.coerce.number().int().min(1).max(10000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  limit: limitSchema,
+  cursor: cursorSchema,
 });
 
 export const suppressDeadLetterSchema = z.object({
@@ -29,7 +36,12 @@ export const sandboxMockResponseSchema = z.object({
   status: z.number().int().min(100).max(599).default(200),
   // Response headers echoed back by the mock receiver (at most 50 entries).
   headers: z
-    .record(z.string(), z.string())
+    // z.object({}).catchall(z.string()) instead of z.record(z.string(), z.string()): both
+    // accept string-keyed/string-valued objects, but z.record() emits `propertyNames`
+    // (JSON Schema Draft-07) which openapi-diff rejects as invalid OpenAPI 3.0.
+    // catchall() emits only `additionalProperties` which is valid in OpenAPI 3.0.
+    .object({})
+    .catchall(z.string())
     .refine((headers) => Object.keys(headers).length <= 50, {
       message: 'At most 50 response headers are allowed',
     })
@@ -42,20 +54,19 @@ export const sandboxMockResponseSchema = z.object({
 });
 
 export const sandboxReplayInputSchema = z.object({
-  mockResponse: sandboxMockResponseSchema.default({
-    status: 200,
-    headers: {},
-    body: '',
-    delayMs: 0,
-  }),
+  mockStatusCode: z.coerce.number().int().min(100).max(599).optional().default(200),
+  mockResponseBody: z.string().optional(),
+  mockResponseHeaders: z.record(z.string(), z.string()).optional(),
 });
 
 export const listSandboxReplaysQuerySchema = z.object({
-  status: z.enum(['completed', 'failed']).optional(),
-  page: z.coerce.number().int().min(1).max(10000).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  limit: limitSchema,
+  cursor: cursorSchema,
 });
 
-export type SandboxMockResponse = z.infer<typeof sandboxMockResponseSchema>;
-export type SandboxReplayInput = z.infer<typeof sandboxReplayInputSchema>;
-export type ListSandboxReplaysQuery = z.infer<typeof listSandboxReplaysQuerySchema>;
+export type SandboxMockResponse = {
+  status: number;
+  body: string;
+  headers: Record<string, string>;
+  delayMs: number;
+};

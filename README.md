@@ -1,5 +1,11 @@
 # Stellar Alerts ⚡
 
+## Worker failure quarantine
+
+Payment alert jobs use a bounded retry policy. Transient infrastructure and provider failures are retried up to `WORKER_MAX_ATTEMPTS` (default `5`, maximum `20`) with exponential backoff. Invalid or otherwise permanent jobs are quarantined immediately and are not retried.
+
+Quarantined jobs are copied to the `payment-alerts-dlq` queue and persisted as `DeadLetter` records with the job ID, failure class, failure reason, attempts made, and configured attempt cap. The dead-letter API exposes this metadata for operator inspection and preserves the existing replay and suppression workflow. The default cap is backward-compatible with the previous five-attempt behavior; set `WORKER_MAX_ATTEMPTS` during rollout if a different cap is required.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-5.10-green.svg)](https://fastify.dev/)
@@ -52,6 +58,8 @@ For complete technical specifications, database schemas, and data flow details, 
 
 ## 🚀 Quick Start for Reviewers & Developers
 
+> **Note:** For a comprehensive setup guide including environment variables, wallet connection, and the freelancer alert quick start flow, please refer to **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
+
 ### 1. Installation & Monorepo Setup
 ```bash
 git clone https://github.com/stellar-alerts-labs/stellar-alerts.git
@@ -90,50 +98,10 @@ Fund a fresh keypair on Stellar Testnet via Friendbot and verify automated inges
 npx tsx --env-file=apps/api/.env apps/api/scripts/seed-and-trigger-payment.ts
 ```
 
-### 6. Streaming Interfaces & Daemon Mode
-
-#### GraphQL Subscriptions
-Access real-time event streaming via GraphQL at `http://localhost:3001/graphql`:
-```graphql
-subscription {
-  paymentStream(filter: { walletId: "your-wallet-id" }) {
-    id
-    fromAddress
-    amount
-    asset
-    receivedAt
-  }
-}
-```
-
-#### gRPC Streaming
-Connect to the gRPC server on port 50051 for enterprise-grade streaming:
+### 6. Validate Dependabot Configuration
+Verify the automated dependency update configuration:
 ```bash
-# Using grpcurl
-grpcurl -plaintext localhost:50051 stellar.LedgerService/StreamLedgerEvents
-```
-
-#### Interactive TUI Dashboard
-Launch the terminal-based real-time monitoring dashboard:
-```bash
-npm run cli:tui
-```
-
-#### Headless Daemon Mode
-Install and run as a system service:
-
-**Linux (systemd):**
-```bash
-npm run daemon:install:systemd
-sudo systemctl daemon-reload
-sudo systemctl enable stellar-alerts
-sudo systemctl start stellar-alerts
-```
-
-**macOS (launchd):**
-```bash
-npm run daemon:install:launchd
-launchctl load ~/Library/LaunchAgents/com.stellaralerts.daemon.plist
+npm run validate:dependabot
 ```
 
 ---
@@ -141,6 +109,7 @@ launchctl load ~/Library/LaunchAgents/com.stellaralerts.daemon.plist
 ## 🏆 Grant Qualification & Documentation
 
 - **Drips Wave Audit & Readiness Report**: See **[drips_wave_readiness_audit.md](file:///C:/Users/user/.gemini/antigravity-ide/brain/12528373-9966-4327-97c9-8c7388be13f6/drips_wave_readiness_audit.md)** for full reviewer scoring & roadmap.
+- **Local Setup & Freelancer Quick Start**: See **[docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md)**.
 - **Grant Submission Qualification Matrix**: See **[SUBMISSION.md](SUBMISSION.md)**.
 - **System Design & API Specs**: See **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
@@ -154,6 +123,18 @@ launchctl load ~/Library/LaunchAgents/com.stellaralerts.daemon.plist
 Join our official Telegram community to ask questions, chat with maintainers, discuss Drips Wave sprint tasks, and stay updated on new releases:
 
 👉 **[Join Stellar Alerts on Telegram](https://t.me/+uElHrnWMb180MWM0)**
+
+---
+
+## 🤖 Automated Dependency Management
+
+Dependabot is configured to automatically update dependencies weekly with grouped PRs to reduce notification noise:
+
+- **JavaScript/npm workspace dependencies**: All workspace packages (`apps/*`, `packages/*`) are monitored for updates
+- **Docker images**: Base images in `docker-compose.yml` (postgres, redis, toxiproxy) are monitored 
+- **GitHub Actions**: Workflow dependencies (actions/checkout, setup-node, etc.) are monitored
+
+All updates run weekly on Mondays and are grouped by ecosystem to minimize PR volume. The configuration can be validated with `npm run validate:dependabot`.
 
 ---
 

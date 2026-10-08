@@ -3,6 +3,7 @@ node_modules
 dist
 build
 .next
+.turbo
 coverage
 apps/**/coverage
 
@@ -17,6 +18,7 @@ scripts/
 !scripts/verify-migrations-shadow.ts
 !scripts/verify-migrations-shadow.test.ts
 !scripts/security-audit.ts
+!scripts/validate-dependabot.js
 # Note: a `!scripts/<file>` negation cannot un-ignore a file inside an
 # already-excluded parent directory (git limitation) — every negated/tracked
 # one-off ops script above (k6-load-test.js included) is added with

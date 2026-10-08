@@ -138,7 +138,67 @@ export interface SsrfValidationOptions {
   dnsLookupFn?: (hostname: string) => Promise<string[]>;
 }
 
+export const DEFAULT_MAX_REDIRECTS = 3;
+export const DEFAULT_MAX_REQUEST_BODY_BYTES = 1024 * 1024;
+export const DEFAULT_MAX_RESPONSE_BODY_BYTES = 64 * 1024;
+
 const DEFAULT_ALLOWED_PORTS = [80, 443, 8080, 8443];
+
+function getBodyByteLength(body: BodyInit | null | undefined): number {
+  if (body === null || body === undefined) {
+    return 0;
+  }
+
+  if (typeof body === 'string') {
+    return Buffer.byteLength(body, 'utf8');
+  }
+
+  if (body instanceof URLSearchParams) {
+    return Buffer.byteLength(body.toString(), 'utf8');
+  }
+
+  if (body instanceof ArrayBuffer) {
+    return body.byteLength;
+  }
+
+  if (ArrayBuffer.isView(body)) {
+    return body.byteLength;
+  }
+
+  if (body instanceof Blob) {
+    return body.size;
+  }
+
+  if (body instanceof FormData) {
+    let size = 0;
+    for (const entry of body.values()) {
+      if (typeof entry === 'string') {
+        size += Buffer.byteLength(entry, 'utf8');
+      } else if (entry instanceof Blob) {
+        size += entry.size;
+      }
+    }
+    return size;
+  }
+
+  return 0;
+}
+
+function assertBodySizeLimit(
+  body: BodyInit | null | undefined,
+  maxBytes: number,
+  label: string,
+  targetUrl: string,
+): void {
+  const size = getBodyByteLength(body);
+  if (size > maxBytes) {
+    throw new SsrfValidationError(
+      `${label} exceeds the maximum size (${size} bytes > ${maxBytes} bytes)`,
+      targetUrl,
+      `${label.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')}_TOO_LARGE`,
+    );
+  }
+}
 
 /**
  * Default DNS resolver that resolves both IPv4 and IPv6 addresses.
@@ -247,13 +307,22 @@ export async function validateUrlForSsrf(
  */
 export async function ssrfSafeFetch(
   inputUrl: string,
-  init: RequestInit & { maxRedirects?: number; ssrfOptions?: SsrfValidationOptions } = {},
+  init: RequestInit & {
+    maxRedirects?: number;
+    maxRequestBytes?: number;
+    maxResponseBytes?: number;
+    ssrfOptions?: SsrfValidationOptions;
+  } = {},
 ): Promise<Response> {
-  const maxRedirects = init.maxRedirects ?? 3;
+  const maxRedirects = init.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
+  const maxRequestBytes = init.maxRequestBytes ?? DEFAULT_MAX_REQUEST_BODY_BYTES;
+  const maxResponseBytes = init.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BODY_BYTES;
   let currentUrl = inputUrl;
   let redirectsCount = 0;
 
   while (true) {
+    assertBodySizeLimit(init.body, maxRequestBytes, 'Request body', currentUrl);
+
     // Validate current hop
     await validateUrlForSsrf(currentUrl, init.ssrfOptions);
 
@@ -262,6 +331,18 @@ export async function ssrfSafeFetch(
       ...init,
       redirect: 'manual',
     });
+
+    const contentLength = response.headers.get('content-length');
+    if (contentLength) {
+      const parsedLength = Number.parseInt(contentLength, 10);
+      if (!Number.isNaN(parsedLength) && parsedLength > maxResponseBytes) {
+        throw new SsrfValidationError(
+          `Response exceeded the maximum allowed size (${parsedLength} bytes > ${maxResponseBytes} bytes)`,
+          currentUrl,
+          'RESPONSE_TOO_LARGE',
+        );
+      }
+    }
 
     const isRedirect = [301, 302, 303, 307, 308].includes(response.status);
 
@@ -280,6 +361,17 @@ export async function ssrfSafeFetch(
       currentUrl = nextUrl;
       redirectsCount++;
       continue;
+    }
+
+    const clonedResponse = response.clone();
+    const responseBodyText = await clonedResponse.text();
+    const responseBodyBytes = Buffer.byteLength(responseBodyText, 'utf8');
+    if (responseBodyBytes > maxResponseBytes) {
+      throw new SsrfValidationError(
+        `Response body exceeded the maximum allowed size (${responseBodyBytes} bytes > ${maxResponseBytes} bytes)`,
+        currentUrl,
+        'RESPONSE_TOO_LARGE',
+      );
     }
 
     return response;

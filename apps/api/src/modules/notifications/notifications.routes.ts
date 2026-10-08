@@ -4,6 +4,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { notificationsController } from './notifications.controller';
+import { telegramMiniAppController } from './telegram-miniapp.controller';
 import { authenticateHook } from '../../middleware/auth.middleware';
 
 export async function notificationsRoutes(app: FastifyInstance) {
@@ -61,5 +62,29 @@ export async function notificationsRoutes(app: FastifyInstance) {
     '/notifications/test-ping',
     { preHandler: [authenticateHook] },
     notificationsController.sendTestPing.bind(notificationsController)
+  );
+
+  // Telegram Mini App — real-time alert triage & filter tuning (#1006).
+  // These endpoints authenticate per-request via the signed `initData` passed
+  // in the `X-Telegram-Init-Data` header, so they intentionally do NOT use the
+  // bearer-token authenticateHook.
+  app.get(
+    '/notifications/telegram/miniapp/state',
+    telegramMiniAppController.getState.bind(telegramMiniAppController)
+  );
+
+  app.get(
+    '/notifications/telegram/miniapp/feed',
+    telegramMiniAppController.getFeed.bind(telegramMiniAppController)
+  );
+
+  app.post(
+    '/notifications/telegram/miniapp/routes',
+    telegramMiniAppController.toggleRoute.bind(telegramMiniAppController)
+  );
+
+  app.post(
+    '/notifications/telegram/miniapp/thresholds',
+    telegramMiniAppController.setThreshold.bind(telegramMiniAppController)
   );
 }

@@ -36,7 +36,7 @@ export const MfaModal: React.FC<MfaModalProps> = ({ isOpen, onClose }) => {
       if (data.success && isMounted() && typeof window !== 'undefined') {
         setMfaEnabled(data.mfaEnabled);
       }
-    } catch (error) {
+    } catch {
       // Ignore network errors during test teardown or unmount
     } finally {
       if (isMounted() && typeof window !== 'undefined') {

@@ -5,6 +5,7 @@ import {
   suppressDeadLetterSchema,
 } from './dead-letters.schema';
 import { deadLettersService } from './dead-letters.service';
+import { CursorError } from '../../utils/pagination';
 import { ConflictError, NotFoundError, ValidationError, zodValidationError } from '../../lib/errors';
 
 export class DeadLettersController {
@@ -15,8 +16,15 @@ export class DeadLettersController {
     }
 
     const userId = (request as any).user.id;
-    const result = await deadLettersService.list(userId, parsed.data);
-    return reply.send({ success: true, ...result });
+    try {
+      const result = await deadLettersService.list(userId, parsed.data);
+      return reply.send({ success: true, deadLetters: result.items, pagination: result.pagination });
+    } catch (err) {
+      if (err instanceof CursorError) {
+        throw new ValidationError('Invalid cursor', [{ path: ['cursor'], message: (err as Error).message }]);
+      }
+      throw err;
+    }
   }
 
   async get(request: FastifyRequest, reply: FastifyReply) {
@@ -25,9 +33,16 @@ export class DeadLettersController {
       throw zodValidationError(parsed, 'Invalid parameters');
     }
 
-    const userId = (request as any).user.id;
-    const deadLetter = await deadLettersService.get(parsed.data.id, userId);
-    return reply.send({ success: true, deadLetter });
+    try {
+      const userId = (request as any).user.id;
+      const deadLetter = await deadLettersService.get(parsed.data.id, userId);
+      return reply.send({ success: true, deadLetter });
+    } catch (error: any) {
+      if (error.message && error.message.startsWith('Dead letter')) {
+        throw new NotFoundError(error.message);
+      }
+      throw error;
+    }
   }
 
   async replay(request: FastifyRequest, reply: FastifyReply) {

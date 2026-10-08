@@ -60,6 +60,11 @@ export type IngestionCursor = Prisma.IngestionCursorModel
  */
 export type Payment = Prisma.PaymentModel
 /**
+ * Model OutboxEvent
+ * 
+ */
+export type OutboxEvent = Prisma.OutboxEventModel
+/**
  * Model NotificationPreference
  * 
  */
@@ -114,6 +119,16 @@ export type WebhookLog = Prisma.WebhookLogModel
  * 
  */
 export type WebhookCircuitBreaker = Prisma.WebhookCircuitBreakerModel
+/**
+ * Model ExportJob
+ * 
+ */
+export type ExportJob = Prisma.ExportJobModel
+/**
+ * Model TransactionSimulation
+ * 
+ */
+export type TransactionSimulation = Prisma.TransactionSimulationModel
 /**
  * Model SorobanEventSnapshot
  * 

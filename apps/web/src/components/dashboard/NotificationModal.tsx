@@ -29,7 +29,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
       if (data.success && isMounted() && typeof window !== 'undefined') {
         setMfaRequired(data.mfaEnabled);
       }
-    } catch (error) {
+    } catch {
       // Ignore network errors during test teardown or unmount
     }
   };

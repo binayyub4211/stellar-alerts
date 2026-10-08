@@ -183,6 +183,7 @@ export type UserWhereInput = {
   mfaEnabled?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   wallets?: Prisma.WalletListRelationFilter
+  exportJobs?: Prisma.ExportJobListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   notifyPrefs?: Prisma.XOR<Prisma.NotificationPreferenceNullableScalarRelationFilter, Prisma.NotificationPreferenceWhereInput> | null
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionListRelationFilter
@@ -197,6 +198,7 @@ export type UserWhereInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryListRelationFilter
   refreshSessions?: Prisma.RefreshSessionListRelationFilter
   telegramSyncCodes?: Prisma.TelegramSyncCodeListRelationFilter
+  simulations?: Prisma.TransactionSimulationListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -206,6 +208,7 @@ export type UserOrderByWithRelationInput = {
   mfaEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   wallets?: Prisma.WalletOrderByRelationAggregateInput
+  exportJobs?: Prisma.ExportJobOrderByRelationAggregateInput
   webhooks?: Prisma.WebhookOrderByRelationAggregateInput
   notifyPrefs?: Prisma.NotificationPreferenceOrderByWithRelationInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionOrderByRelationAggregateInput
@@ -220,6 +223,7 @@ export type UserOrderByWithRelationInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryOrderByRelationAggregateInput
   refreshSessions?: Prisma.RefreshSessionOrderByRelationAggregateInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeOrderByRelationAggregateInput
+  simulations?: Prisma.TransactionSimulationOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -232,6 +236,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   mfaEnabled?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   wallets?: Prisma.WalletListRelationFilter
+  exportJobs?: Prisma.ExportJobListRelationFilter
   webhooks?: Prisma.WebhookListRelationFilter
   notifyPrefs?: Prisma.XOR<Prisma.NotificationPreferenceNullableScalarRelationFilter, Prisma.NotificationPreferenceWhereInput> | null
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionListRelationFilter
@@ -246,6 +251,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   notificationDeliveries?: Prisma.NotificationDeliveryListRelationFilter
   refreshSessions?: Prisma.RefreshSessionListRelationFilter
   telegramSyncCodes?: Prisma.TelegramSyncCodeListRelationFilter
+  simulations?: Prisma.TransactionSimulationListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -277,6 +283,7 @@ export type UserCreateInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -291,6 +298,7 @@ export type UserCreateInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -300,6 +308,7 @@ export type UserUncheckedCreateInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -314,6 +323,7 @@ export type UserUncheckedCreateInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -323,6 +333,7 @@ export type UserUpdateInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -337,6 +348,7 @@ export type UserUpdateInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -346,6 +358,7 @@ export type UserUncheckedUpdateInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -360,6 +373,7 @@ export type UserUncheckedUpdateInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -504,6 +518,34 @@ export type UserUpdateOneRequiredWithoutWebhooksNestedInput = {
   upsert?: Prisma.UserUpsertWithoutWebhooksInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutWebhooksInput, Prisma.UserUpdateWithoutWebhooksInput>, Prisma.UserUncheckedUpdateWithoutWebhooksInput>
+}
+
+export type UserCreateNestedOneWithoutExportJobsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutExportJobsInput, Prisma.UserUncheckedCreateWithoutExportJobsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutExportJobsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutExportJobsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutExportJobsInput, Prisma.UserUncheckedCreateWithoutExportJobsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutExportJobsInput
+  upsert?: Prisma.UserUpsertWithoutExportJobsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutExportJobsInput, Prisma.UserUpdateWithoutExportJobsInput>, Prisma.UserUncheckedUpdateWithoutExportJobsInput>
+}
+
+export type UserCreateNestedOneWithoutSimulationsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSimulationsInput, Prisma.UserUncheckedCreateWithoutSimulationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSimulationsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutSimulationsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutSimulationsInput, Prisma.UserUncheckedCreateWithoutSimulationsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutSimulationsInput
+  upsert?: Prisma.UserUpsertWithoutSimulationsInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutSimulationsInput, Prisma.UserUpdateWithoutSimulationsInput>, Prisma.UserUncheckedUpdateWithoutSimulationsInput>
 }
 
 export type UserCreateNestedOneWithoutSorobanSubscriptionsInput = {
@@ -658,6 +700,7 @@ export type UserCreateWithoutWalletsInput = {
   mfaSecret?: string | null
   mfaEnabled?: boolean
   createdAt?: Date | string
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -672,6 +715,7 @@ export type UserCreateWithoutWalletsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWalletsInput = {
@@ -680,6 +724,7 @@ export type UserUncheckedCreateWithoutWalletsInput = {
   mfaSecret?: string | null
   mfaEnabled?: boolean
   createdAt?: Date | string
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -694,6 +739,7 @@ export type UserUncheckedCreateWithoutWalletsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWalletsInput = {
@@ -718,6 +764,7 @@ export type UserUpdateWithoutWalletsInput = {
   mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -732,6 +779,7 @@ export type UserUpdateWithoutWalletsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWalletsInput = {
@@ -740,6 +788,7 @@ export type UserUncheckedUpdateWithoutWalletsInput = {
   mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -754,6 +803,7 @@ export type UserUncheckedUpdateWithoutWalletsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotifyPrefsInput = {
@@ -763,6 +813,7 @@ export type UserCreateWithoutNotifyPrefsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherCreateNestedManyWithoutUserInput
@@ -776,6 +827,7 @@ export type UserCreateWithoutNotifyPrefsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotifyPrefsInput = {
@@ -785,6 +837,7 @@ export type UserUncheckedCreateWithoutNotifyPrefsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedCreateNestedManyWithoutUserInput
@@ -798,6 +851,7 @@ export type UserUncheckedCreateWithoutNotifyPrefsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotifyPrefsInput = {
@@ -823,6 +877,7 @@ export type UserUpdateWithoutNotifyPrefsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUpdateManyWithoutUserNestedInput
@@ -836,6 +891,7 @@ export type UserUpdateWithoutNotifyPrefsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotifyPrefsInput = {
@@ -845,6 +901,7 @@ export type UserUncheckedUpdateWithoutNotifyPrefsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedUpdateManyWithoutUserNestedInput
@@ -858,6 +915,7 @@ export type UserUncheckedUpdateWithoutNotifyPrefsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAlertRulesInput = {
@@ -867,6 +925,7 @@ export type UserCreateWithoutAlertRulesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -880,6 +939,7 @@ export type UserCreateWithoutAlertRulesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAlertRulesInput = {
@@ -889,6 +949,7 @@ export type UserUncheckedCreateWithoutAlertRulesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -902,6 +963,7 @@ export type UserUncheckedCreateWithoutAlertRulesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAlertRulesInput = {
@@ -927,6 +989,7 @@ export type UserUpdateWithoutAlertRulesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -940,6 +1003,7 @@ export type UserUpdateWithoutAlertRulesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAlertRulesInput = {
@@ -949,6 +1013,7 @@ export type UserUncheckedUpdateWithoutAlertRulesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -962,6 +1027,7 @@ export type UserUncheckedUpdateWithoutAlertRulesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTelegramSyncCodesInput = {
@@ -971,6 +1037,7 @@ export type UserCreateWithoutTelegramSyncCodesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -984,6 +1051,7 @@ export type UserCreateWithoutTelegramSyncCodesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeCreateNestedManyWithoutUserInput
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTelegramSyncCodesInput = {
@@ -993,6 +1061,7 @@ export type UserUncheckedCreateWithoutTelegramSyncCodesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1006,6 +1075,7 @@ export type UserUncheckedCreateWithoutTelegramSyncCodesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedCreateNestedManyWithoutUserInput
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTelegramSyncCodesInput = {
@@ -1031,6 +1101,7 @@ export type UserUpdateWithoutTelegramSyncCodesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1044,6 +1115,7 @@ export type UserUpdateWithoutTelegramSyncCodesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUpdateManyWithoutUserNestedInput
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTelegramSyncCodesInput = {
@@ -1053,6 +1125,7 @@ export type UserUncheckedUpdateWithoutTelegramSyncCodesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1066,6 +1139,7 @@ export type UserUncheckedUpdateWithoutTelegramSyncCodesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutWebhooksInput = {
@@ -1075,6 +1149,7 @@ export type UserCreateWithoutWebhooksInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherCreateNestedManyWithoutUserInput
@@ -1088,6 +1163,7 @@ export type UserCreateWithoutWebhooksInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWebhooksInput = {
@@ -1097,6 +1173,7 @@ export type UserUncheckedCreateWithoutWebhooksInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedCreateNestedManyWithoutUserInput
@@ -1110,6 +1187,7 @@ export type UserUncheckedCreateWithoutWebhooksInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWebhooksInput = {
@@ -1135,6 +1213,232 @@ export type UserUpdateWithoutWebhooksInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
+  notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUpdateManyWithoutUserNestedInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUpdateManyWithoutUserNestedInput
+  dexSwapWatches?: Prisma.DexSwapWatchUpdateManyWithoutUserNestedInput
+  alertRules?: Prisma.AlertRuleUpdateManyWithoutUserNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutUserNestedInput
+  deadLetters?: Prisma.DeadLetterUpdateManyWithoutUserNestedInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutUserNestedInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUpdateManyWithoutUserNestedInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
+  refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutWebhooksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
+  notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedUpdateManyWithoutUserNestedInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUncheckedUpdateManyWithoutUserNestedInput
+  dexSwapWatches?: Prisma.DexSwapWatchUncheckedUpdateManyWithoutUserNestedInput
+  alertRules?: Prisma.AlertRuleUncheckedUpdateManyWithoutUserNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutUserNestedInput
+  deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutUserNestedInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutUserNestedInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
+  refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutExportJobsInput = {
+  id?: string
+  email: string
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  createdAt?: Date | string
+  wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
+  notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherCreateNestedManyWithoutUserInput
+  anchorWatches?: Prisma.AnchorTransactionWatchCreateNestedManyWithoutUserInput
+  dexSwapWatches?: Prisma.DexSwapWatchCreateNestedManyWithoutUserInput
+  alertRules?: Prisma.AlertRuleCreateNestedManyWithoutUserInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutUserInput
+  deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutUserInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutUserInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeCreateNestedManyWithoutUserInput
+  notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
+  refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutExportJobsInput = {
+  id?: string
+  email: string
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  createdAt?: Date | string
+  wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
+  notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedCreateNestedManyWithoutUserInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUncheckedCreateNestedManyWithoutUserInput
+  dexSwapWatches?: Prisma.DexSwapWatchUncheckedCreateNestedManyWithoutUserInput
+  alertRules?: Prisma.AlertRuleUncheckedCreateNestedManyWithoutUserInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutUserInput
+  deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutUserInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutUserInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
+  refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutExportJobsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutExportJobsInput, Prisma.UserUncheckedCreateWithoutExportJobsInput>
+}
+
+export type UserUpsertWithoutExportJobsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutExportJobsInput, Prisma.UserUncheckedUpdateWithoutExportJobsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutExportJobsInput, Prisma.UserUncheckedCreateWithoutExportJobsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutExportJobsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutExportJobsInput, Prisma.UserUncheckedUpdateWithoutExportJobsInput>
+}
+
+export type UserUpdateWithoutExportJobsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
+  notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUpdateManyWithoutUserNestedInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUpdateManyWithoutUserNestedInput
+  dexSwapWatches?: Prisma.DexSwapWatchUpdateManyWithoutUserNestedInput
+  alertRules?: Prisma.AlertRuleUpdateManyWithoutUserNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUpdateManyWithoutUserNestedInput
+  deadLetters?: Prisma.DeadLetterUpdateManyWithoutUserNestedInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUpdateManyWithoutUserNestedInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUpdateManyWithoutUserNestedInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
+  refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutExportJobsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
+  notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedUpdateManyWithoutUserNestedInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUncheckedUpdateManyWithoutUserNestedInput
+  dexSwapWatches?: Prisma.DexSwapWatchUncheckedUpdateManyWithoutUserNestedInput
+  alertRules?: Prisma.AlertRuleUncheckedUpdateManyWithoutUserNestedInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedUpdateManyWithoutUserNestedInput
+  deadLetters?: Prisma.DeadLetterUncheckedUpdateManyWithoutUserNestedInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUncheckedUpdateManyWithoutUserNestedInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
+  refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutSimulationsInput = {
+  id?: string
+  email: string
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  createdAt?: Date | string
+  wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
+  webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
+  notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherCreateNestedManyWithoutUserInput
+  anchorWatches?: Prisma.AnchorTransactionWatchCreateNestedManyWithoutUserInput
+  dexSwapWatches?: Prisma.DexSwapWatchCreateNestedManyWithoutUserInput
+  alertRules?: Prisma.AlertRuleCreateNestedManyWithoutUserInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptCreateNestedManyWithoutUserInput
+  deadLetters?: Prisma.DeadLetterCreateNestedManyWithoutUserInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayCreateNestedManyWithoutUserInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeCreateNestedManyWithoutUserInput
+  notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
+  refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutSimulationsInput = {
+  id?: string
+  email: string
+  mfaSecret?: string | null
+  mfaEnabled?: boolean
+  createdAt?: Date | string
+  wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
+  webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
+  notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
+  sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
+  multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedCreateNestedManyWithoutUserInput
+  anchorWatches?: Prisma.AnchorTransactionWatchUncheckedCreateNestedManyWithoutUserInput
+  dexSwapWatches?: Prisma.DexSwapWatchUncheckedCreateNestedManyWithoutUserInput
+  alertRules?: Prisma.AlertRuleUncheckedCreateNestedManyWithoutUserInput
+  deliveryAttempts?: Prisma.NotificationDeliveryAttemptUncheckedCreateNestedManyWithoutUserInput
+  deadLetters?: Prisma.DeadLetterUncheckedCreateNestedManyWithoutUserInput
+  webhookSandboxReplays?: Prisma.WebhookSandboxReplayUncheckedCreateNestedManyWithoutUserInput
+  mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedCreateNestedManyWithoutUserInput
+  notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
+  refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
+  telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutSimulationsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutSimulationsInput, Prisma.UserUncheckedCreateWithoutSimulationsInput>
+}
+
+export type UserUpsertWithoutSimulationsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutSimulationsInput, Prisma.UserUncheckedUpdateWithoutSimulationsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutSimulationsInput, Prisma.UserUncheckedCreateWithoutSimulationsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutSimulationsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutSimulationsInput, Prisma.UserUncheckedUpdateWithoutSimulationsInput>
+}
+
+export type UserUpdateWithoutSimulationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
+  webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUpdateManyWithoutUserNestedInput
@@ -1150,13 +1454,15 @@ export type UserUpdateWithoutWebhooksInput = {
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
 }
 
-export type UserUncheckedUpdateWithoutWebhooksInput = {
+export type UserUncheckedUpdateWithoutSimulationsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   mfaSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
+  webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedUpdateManyWithoutUserNestedInput
@@ -1179,6 +1485,7 @@ export type UserCreateWithoutSorobanSubscriptionsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherCreateNestedManyWithoutUserInput
@@ -1192,6 +1499,7 @@ export type UserCreateWithoutSorobanSubscriptionsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutSorobanSubscriptionsInput = {
@@ -1201,6 +1509,7 @@ export type UserUncheckedCreateWithoutSorobanSubscriptionsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedCreateNestedManyWithoutUserInput
@@ -1214,6 +1523,7 @@ export type UserUncheckedCreateWithoutSorobanSubscriptionsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutSorobanSubscriptionsInput = {
@@ -1239,6 +1549,7 @@ export type UserUpdateWithoutSorobanSubscriptionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUpdateManyWithoutUserNestedInput
@@ -1252,6 +1563,7 @@ export type UserUpdateWithoutSorobanSubscriptionsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSorobanSubscriptionsInput = {
@@ -1261,6 +1573,7 @@ export type UserUncheckedUpdateWithoutSorobanSubscriptionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   multisigSignerWatches?: Prisma.MultisigSignerWatcherUncheckedUpdateManyWithoutUserNestedInput
@@ -1274,6 +1587,7 @@ export type UserUncheckedUpdateWithoutSorobanSubscriptionsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMultisigSignerWatchesInput = {
@@ -1283,6 +1597,7 @@ export type UserCreateWithoutMultisigSignerWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1296,6 +1611,7 @@ export type UserCreateWithoutMultisigSignerWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMultisigSignerWatchesInput = {
@@ -1305,6 +1621,7 @@ export type UserUncheckedCreateWithoutMultisigSignerWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1318,6 +1635,7 @@ export type UserUncheckedCreateWithoutMultisigSignerWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMultisigSignerWatchesInput = {
@@ -1343,6 +1661,7 @@ export type UserUpdateWithoutMultisigSignerWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1356,6 +1675,7 @@ export type UserUpdateWithoutMultisigSignerWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMultisigSignerWatchesInput = {
@@ -1365,6 +1685,7 @@ export type UserUncheckedUpdateWithoutMultisigSignerWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1378,6 +1699,7 @@ export type UserUncheckedUpdateWithoutMultisigSignerWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutAnchorWatchesInput = {
@@ -1387,6 +1709,7 @@ export type UserCreateWithoutAnchorWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1400,6 +1723,7 @@ export type UserCreateWithoutAnchorWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAnchorWatchesInput = {
@@ -1409,6 +1733,7 @@ export type UserUncheckedCreateWithoutAnchorWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1422,6 +1747,7 @@ export type UserUncheckedCreateWithoutAnchorWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAnchorWatchesInput = {
@@ -1447,6 +1773,7 @@ export type UserUpdateWithoutAnchorWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1460,6 +1787,7 @@ export type UserUpdateWithoutAnchorWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAnchorWatchesInput = {
@@ -1469,6 +1797,7 @@ export type UserUncheckedUpdateWithoutAnchorWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1482,6 +1811,7 @@ export type UserUncheckedUpdateWithoutAnchorWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutDexSwapWatchesInput = {
@@ -1491,6 +1821,7 @@ export type UserCreateWithoutDexSwapWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1504,6 +1835,7 @@ export type UserCreateWithoutDexSwapWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDexSwapWatchesInput = {
@@ -1513,6 +1845,7 @@ export type UserUncheckedCreateWithoutDexSwapWatchesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1526,6 +1859,7 @@ export type UserUncheckedCreateWithoutDexSwapWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDexSwapWatchesInput = {
@@ -1551,6 +1885,7 @@ export type UserUpdateWithoutDexSwapWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1564,6 +1899,7 @@ export type UserUpdateWithoutDexSwapWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDexSwapWatchesInput = {
@@ -1573,6 +1909,7 @@ export type UserUncheckedUpdateWithoutDexSwapWatchesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1586,6 +1923,7 @@ export type UserUncheckedUpdateWithoutDexSwapWatchesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutNotificationDeliveriesInput = {
@@ -1595,6 +1933,7 @@ export type UserCreateWithoutNotificationDeliveriesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1608,6 +1947,7 @@ export type UserCreateWithoutNotificationDeliveriesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutNotificationDeliveriesInput = {
@@ -1617,6 +1957,7 @@ export type UserUncheckedCreateWithoutNotificationDeliveriesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1630,6 +1971,7 @@ export type UserUncheckedCreateWithoutNotificationDeliveriesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutNotificationDeliveriesInput = {
@@ -1655,6 +1997,7 @@ export type UserUpdateWithoutNotificationDeliveriesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1668,6 +2011,7 @@ export type UserUpdateWithoutNotificationDeliveriesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationDeliveriesInput = {
@@ -1677,6 +2021,7 @@ export type UserUncheckedUpdateWithoutNotificationDeliveriesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1690,6 +2035,7 @@ export type UserUncheckedUpdateWithoutNotificationDeliveriesInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutDeliveryAttemptsInput = {
@@ -1699,6 +2045,7 @@ export type UserCreateWithoutDeliveryAttemptsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1712,6 +2059,7 @@ export type UserCreateWithoutDeliveryAttemptsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDeliveryAttemptsInput = {
@@ -1721,6 +2069,7 @@ export type UserUncheckedCreateWithoutDeliveryAttemptsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1734,6 +2083,7 @@ export type UserUncheckedCreateWithoutDeliveryAttemptsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDeliveryAttemptsInput = {
@@ -1759,6 +2109,7 @@ export type UserUpdateWithoutDeliveryAttemptsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1772,6 +2123,7 @@ export type UserUpdateWithoutDeliveryAttemptsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDeliveryAttemptsInput = {
@@ -1781,6 +2133,7 @@ export type UserUncheckedUpdateWithoutDeliveryAttemptsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1794,6 +2147,7 @@ export type UserUncheckedUpdateWithoutDeliveryAttemptsInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutDeadLettersInput = {
@@ -1803,6 +2157,7 @@ export type UserCreateWithoutDeadLettersInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1816,6 +2171,7 @@ export type UserCreateWithoutDeadLettersInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDeadLettersInput = {
@@ -1825,6 +2181,7 @@ export type UserUncheckedCreateWithoutDeadLettersInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1838,6 +2195,7 @@ export type UserUncheckedCreateWithoutDeadLettersInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDeadLettersInput = {
@@ -1863,6 +2221,7 @@ export type UserUpdateWithoutDeadLettersInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1876,6 +2235,7 @@ export type UserUpdateWithoutDeadLettersInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDeadLettersInput = {
@@ -1885,6 +2245,7 @@ export type UserUncheckedUpdateWithoutDeadLettersInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -1898,6 +2259,7 @@ export type UserUncheckedUpdateWithoutDeadLettersInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutWebhookSandboxReplaysInput = {
@@ -1907,6 +2269,7 @@ export type UserCreateWithoutWebhookSandboxReplaysInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -1920,6 +2283,7 @@ export type UserCreateWithoutWebhookSandboxReplaysInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutWebhookSandboxReplaysInput = {
@@ -1929,6 +2293,7 @@ export type UserUncheckedCreateWithoutWebhookSandboxReplaysInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -1942,6 +2307,7 @@ export type UserUncheckedCreateWithoutWebhookSandboxReplaysInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutWebhookSandboxReplaysInput = {
@@ -1967,6 +2333,7 @@ export type UserUpdateWithoutWebhookSandboxReplaysInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -1980,6 +2347,7 @@ export type UserUpdateWithoutWebhookSandboxReplaysInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutWebhookSandboxReplaysInput = {
@@ -1989,6 +2357,7 @@ export type UserUncheckedUpdateWithoutWebhookSandboxReplaysInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2002,6 +2371,7 @@ export type UserUncheckedUpdateWithoutWebhookSandboxReplaysInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutMfaRecoveryCodesInput = {
@@ -2011,6 +2381,7 @@ export type UserCreateWithoutMfaRecoveryCodesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -2024,6 +2395,7 @@ export type UserCreateWithoutMfaRecoveryCodesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMfaRecoveryCodesInput = {
@@ -2033,6 +2405,7 @@ export type UserUncheckedCreateWithoutMfaRecoveryCodesInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2046,6 +2419,7 @@ export type UserUncheckedCreateWithoutMfaRecoveryCodesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   refreshSessions?: Prisma.RefreshSessionUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMfaRecoveryCodesInput = {
@@ -2071,6 +2445,7 @@ export type UserUpdateWithoutMfaRecoveryCodesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -2084,6 +2459,7 @@ export type UserUpdateWithoutMfaRecoveryCodesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMfaRecoveryCodesInput = {
@@ -2093,6 +2469,7 @@ export type UserUncheckedUpdateWithoutMfaRecoveryCodesInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2106,6 +2483,7 @@ export type UserUncheckedUpdateWithoutMfaRecoveryCodesInput = {
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   refreshSessions?: Prisma.RefreshSessionUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutRefreshSessionsInput = {
@@ -2115,6 +2493,7 @@ export type UserCreateWithoutRefreshSessionsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionCreateNestedManyWithoutUserInput
@@ -2128,6 +2507,7 @@ export type UserCreateWithoutRefreshSessionsInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeCreateNestedManyWithoutUserInput
   notificationDeliveries?: Prisma.NotificationDeliveryCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRefreshSessionsInput = {
@@ -2137,6 +2517,7 @@ export type UserUncheckedCreateWithoutRefreshSessionsInput = {
   mfaEnabled?: boolean
   createdAt?: Date | string
   wallets?: Prisma.WalletUncheckedCreateNestedManyWithoutUserInput
+  exportJobs?: Prisma.ExportJobUncheckedCreateNestedManyWithoutUserInput
   webhooks?: Prisma.WebhookUncheckedCreateNestedManyWithoutUserInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedCreateNestedOneWithoutUserInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedCreateNestedManyWithoutUserInput
@@ -2150,6 +2531,7 @@ export type UserUncheckedCreateWithoutRefreshSessionsInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedCreateNestedManyWithoutUserInput
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedCreateNestedManyWithoutUserInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedCreateNestedManyWithoutUserInput
+  simulations?: Prisma.TransactionSimulationUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRefreshSessionsInput = {
@@ -2175,6 +2557,7 @@ export type UserUpdateWithoutRefreshSessionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUpdateManyWithoutUserNestedInput
@@ -2188,6 +2571,7 @@ export type UserUpdateWithoutRefreshSessionsInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUpdateManyWithoutUserNestedInput
   notificationDeliveries?: Prisma.NotificationDeliveryUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRefreshSessionsInput = {
@@ -2197,6 +2581,7 @@ export type UserUncheckedUpdateWithoutRefreshSessionsInput = {
   mfaEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   wallets?: Prisma.WalletUncheckedUpdateManyWithoutUserNestedInput
+  exportJobs?: Prisma.ExportJobUncheckedUpdateManyWithoutUserNestedInput
   webhooks?: Prisma.WebhookUncheckedUpdateManyWithoutUserNestedInput
   notifyPrefs?: Prisma.NotificationPreferenceUncheckedUpdateOneWithoutUserNestedInput
   sorobanSubscriptions?: Prisma.SorobanContractSubscriptionUncheckedUpdateManyWithoutUserNestedInput
@@ -2210,6 +2595,7 @@ export type UserUncheckedUpdateWithoutRefreshSessionsInput = {
   mfaRecoveryCodes?: Prisma.MfaRecoveryCodeUncheckedUpdateManyWithoutUserNestedInput
   notificationDeliveries?: Prisma.NotificationDeliveryUncheckedUpdateManyWithoutUserNestedInput
   telegramSyncCodes?: Prisma.TelegramSyncCodeUncheckedUpdateManyWithoutUserNestedInput
+  simulations?: Prisma.TransactionSimulationUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -2219,6 +2605,7 @@ export type UserUncheckedUpdateWithoutRefreshSessionsInput = {
 
 export type UserCountOutputType = {
   wallets: number
+  exportJobs: number
   webhooks: number
   sorobanSubscriptions: number
   multisigSignerWatches: number
@@ -2232,10 +2619,12 @@ export type UserCountOutputType = {
   notificationDeliveries: number
   refreshSessions: number
   telegramSyncCodes: number
+  simulations: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   wallets?: boolean | UserCountOutputTypeCountWalletsArgs
+  exportJobs?: boolean | UserCountOutputTypeCountExportJobsArgs
   webhooks?: boolean | UserCountOutputTypeCountWebhooksArgs
   sorobanSubscriptions?: boolean | UserCountOutputTypeCountSorobanSubscriptionsArgs
   multisigSignerWatches?: boolean | UserCountOutputTypeCountMultisigSignerWatchesArgs
@@ -2249,6 +2638,7 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   notificationDeliveries?: boolean | UserCountOutputTypeCountNotificationDeliveriesArgs
   refreshSessions?: boolean | UserCountOutputTypeCountRefreshSessionsArgs
   telegramSyncCodes?: boolean | UserCountOutputTypeCountTelegramSyncCodesArgs
+  simulations?: boolean | UserCountOutputTypeCountSimulationsArgs
 }
 
 /**
@@ -2266,6 +2656,13 @@ export type UserCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
  */
 export type UserCountOutputTypeCountWalletsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.WalletWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountExportJobsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ExportJobWhereInput
 }
 
 /**
@@ -2359,6 +2756,13 @@ export type UserCountOutputTypeCountTelegramSyncCodesArgs<ExtArgs extends runtim
   where?: Prisma.TelegramSyncCodeWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountSimulationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TransactionSimulationWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2367,6 +2771,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   mfaEnabled?: boolean
   createdAt?: boolean
   wallets?: boolean | Prisma.User$walletsArgs<ExtArgs>
+  exportJobs?: boolean | Prisma.User$exportJobsArgs<ExtArgs>
   webhooks?: boolean | Prisma.User$webhooksArgs<ExtArgs>
   notifyPrefs?: boolean | Prisma.User$notifyPrefsArgs<ExtArgs>
   sorobanSubscriptions?: boolean | Prisma.User$sorobanSubscriptionsArgs<ExtArgs>
@@ -2381,6 +2786,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   notificationDeliveries?: boolean | Prisma.User$notificationDeliveriesArgs<ExtArgs>
   refreshSessions?: boolean | Prisma.User$refreshSessionsArgs<ExtArgs>
   telegramSyncCodes?: boolean | Prisma.User$telegramSyncCodesArgs<ExtArgs>
+  simulations?: boolean | Prisma.User$simulationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -2411,6 +2817,7 @@ export type UserSelectScalar = {
 export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "mfaSecret" | "mfaEnabled" | "createdAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   wallets?: boolean | Prisma.User$walletsArgs<ExtArgs>
+  exportJobs?: boolean | Prisma.User$exportJobsArgs<ExtArgs>
   webhooks?: boolean | Prisma.User$webhooksArgs<ExtArgs>
   notifyPrefs?: boolean | Prisma.User$notifyPrefsArgs<ExtArgs>
   sorobanSubscriptions?: boolean | Prisma.User$sorobanSubscriptionsArgs<ExtArgs>
@@ -2425,6 +2832,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   notificationDeliveries?: boolean | Prisma.User$notificationDeliveriesArgs<ExtArgs>
   refreshSessions?: boolean | Prisma.User$refreshSessionsArgs<ExtArgs>
   telegramSyncCodes?: boolean | Prisma.User$telegramSyncCodesArgs<ExtArgs>
+  simulations?: boolean | Prisma.User$simulationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2434,6 +2842,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   name: "User"
   objects: {
     wallets: Prisma.$WalletPayload<ExtArgs>[]
+    exportJobs: Prisma.$ExportJobPayload<ExtArgs>[]
     webhooks: Prisma.$WebhookPayload<ExtArgs>[]
     notifyPrefs: Prisma.$NotificationPreferencePayload<ExtArgs> | null
     sorobanSubscriptions: Prisma.$SorobanContractSubscriptionPayload<ExtArgs>[]
@@ -2448,6 +2857,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     notificationDeliveries: Prisma.$NotificationDeliveryPayload<ExtArgs>[]
     refreshSessions: Prisma.$RefreshSessionPayload<ExtArgs>[]
     telegramSyncCodes: Prisma.$TelegramSyncCodePayload<ExtArgs>[]
+    simulations: Prisma.$TransactionSimulationPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2850,6 +3260,7 @@ readonly fields: UserFieldRefs;
 export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   wallets<T extends Prisma.User$walletsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$walletsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WalletPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  exportJobs<T extends Prisma.User$exportJobsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$exportJobsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ExportJobPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   webhooks<T extends Prisma.User$webhooksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$webhooksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WebhookPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   notifyPrefs<T extends Prisma.User$notifyPrefsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notifyPrefsArgs<ExtArgs>>): Prisma.Prisma__NotificationPreferenceClient<runtime.Types.Result.GetResult<Prisma.$NotificationPreferencePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   sorobanSubscriptions<T extends Prisma.User$sorobanSubscriptionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sorobanSubscriptionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SorobanContractSubscriptionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2864,6 +3275,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   notificationDeliveries<T extends Prisma.User$notificationDeliveriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$notificationDeliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$NotificationDeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refreshSessions<T extends Prisma.User$refreshSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefreshSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   telegramSyncCodes<T extends Prisma.User$telegramSyncCodesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$telegramSyncCodesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TelegramSyncCodePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  simulations<T extends Prisma.User$simulationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$simulationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TransactionSimulationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3315,6 +3727,30 @@ export type User$walletsArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 }
 
 /**
+ * User.exportJobs
+ */
+export type User$exportJobsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ExportJob
+   */
+  select?: Prisma.ExportJobSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ExportJob
+   */
+  omit?: Prisma.ExportJobOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ExportJobInclude<ExtArgs> | null
+  where?: Prisma.ExportJobWhereInput
+  orderBy?: Prisma.ExportJobOrderByWithRelationInput | Prisma.ExportJobOrderByWithRelationInput[]
+  cursor?: Prisma.ExportJobWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ExportJobScalarFieldEnum | Prisma.ExportJobScalarFieldEnum[]
+}
+
+/**
  * User.webhooks
  */
 export type User$webhooksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3643,6 +4079,30 @@ export type User$telegramSyncCodesArgs<ExtArgs extends runtime.Types.Extensions.
   take?: number
   skip?: number
   distinct?: Prisma.TelegramSyncCodeScalarFieldEnum | Prisma.TelegramSyncCodeScalarFieldEnum[]
+}
+
+/**
+ * User.simulations
+ */
+export type User$simulationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TransactionSimulation
+   */
+  select?: Prisma.TransactionSimulationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TransactionSimulation
+   */
+  omit?: Prisma.TransactionSimulationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TransactionSimulationInclude<ExtArgs> | null
+  where?: Prisma.TransactionSimulationWhereInput
+  orderBy?: Prisma.TransactionSimulationOrderByWithRelationInput | Prisma.TransactionSimulationOrderByWithRelationInput[]
+  cursor?: Prisma.TransactionSimulationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TransactionSimulationScalarFieldEnum | Prisma.TransactionSimulationScalarFieldEnum[]
 }
 
 /**
