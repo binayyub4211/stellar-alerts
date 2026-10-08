@@ -113,6 +113,7 @@ npm run validate:dependabot
 - **Grant Submission Qualification Matrix**: See **[SUBMISSION.md](SUBMISSION.md)**.
 - **System Design & API Specs**: See **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+- **Code of Conduct**: See **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
 - **Development Roadmap**: See **[ROADMAP.md](ROADMAP.md)**.
 - **Soroban Smart Contract**: See **[contracts/alert_registry/README.md](contracts/alert_registry/README.md)**.
 - **Slack Slash Commands (`/stellar`)**: See **[docs/SLACK_SLASH_COMMANDS.md](docs/SLACK_SLASH_COMMANDS.md)**.
@@ -127,15 +128,9 @@ Join our official Telegram community to ask questions, chat with maintainers, di
 
 ---
 
-## 🤖 Automated Dependency Management
+## 🤝 Code of Conduct
 
-Dependabot is configured to automatically update dependencies weekly with grouped PRs to reduce notification noise:
-
-- **JavaScript/npm workspace dependencies**: All workspace packages (`apps/*`, `packages/*`) are monitored for updates
-- **Docker images**: Base images in `docker-compose.yml` (postgres, redis, toxiproxy) are monitored 
-- **GitHub Actions**: Workflow dependencies (actions/checkout, setup-node, etc.) are monitored
-
-All updates run weekly on Mondays and are grouped by ecosystem to minimize PR volume. The configuration can be validated with `npm run validate:dependabot`.
+We are committed to fostering an open and welcoming community. All contributors and participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md), which outlines our standards, reporting channels, and enforcement responsibilities.
 
 ---
 
