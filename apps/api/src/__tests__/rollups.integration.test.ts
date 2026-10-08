@@ -20,9 +20,9 @@ afterAll(async () => {
 });
 
 async function clearTestData() {
+  await client.query('DELETE FROM "Payment" WHERE "txHash" LIKE $1;', ['test-%']);
   await client.query('REFRESH MATERIALIZED VIEW "payment_hourly_rollup" WITH NO DATA;');
   await client.query('REFRESH MATERIALIZED VIEW "payment_daily_rollup" WITH NO DATA;');
-  await client.query('DELETE FROM "Payment" WHERE "txHash" LIKE $1;', ['test-%']);
 }
 
 describe('Payment rollups integration', async () => {
