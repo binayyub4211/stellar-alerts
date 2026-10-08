@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { randomUUID as uuidv4 } from 'node:crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 // This integration test requires a running Postgres instance reachable via
 // environment variables used by the app (PGHOST/PGUSER/PGPASSWORD/PGDATABASE).
@@ -20,9 +20,9 @@ afterAll(async () => {
 });
 
 async function clearTestData() {
+  await client.query('DELETE FROM "payment_hourly_rollup";');
+  await client.query('DELETE FROM "payment_daily_rollup";');
   await client.query('DELETE FROM "Payment" WHERE "txHash" LIKE $1;', ['test-%']);
-  await client.query('REFRESH MATERIALIZED VIEW "payment_hourly_rollup" WITH NO DATA;');
-  await client.query('REFRESH MATERIALIZED VIEW "payment_daily_rollup" WITH NO DATA;');
 }
 
 describe('Payment rollups integration', async () => {

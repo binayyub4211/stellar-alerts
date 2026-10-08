@@ -405,6 +405,19 @@ export async function ssrfSafeFetch(
       }
     }
 
+    const isRedirect = [301, 302, 303, 307, 308].includes(response.status);
+
+    if (isRedirect) {
+      if (redirectsCount >= maxRedirects) {
+        throw new SsrfValidationError(`Too many redirects (exceeded limit of ${maxRedirects})`, currentUrl, 'MAX_REDIRECTS_EXCEEDED');
+      }
+
+      const location = response.headers.get('location');
+      if (!location) {
+        throw new SsrfValidationError('Redirect response missing Location header', currentUrl, 'MISSING_REDIRECT_LOCATION');
+      }
+    }
+
     if (handledRedirect) {
       continue;
     }
