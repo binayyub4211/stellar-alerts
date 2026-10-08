@@ -6,12 +6,13 @@ import {
   MerkleProofStep,
 } from "../utils/merkle-verifier";
 import { decodeScAddress, decodeScAmount, formatTokenAmount } from "./stellar";
+import { stellarNetwork } from "../config/network";
 import { sorobanStateService } from "../modules/soroban-state/soroban-state.service";
 import { env } from "../config/env";
 import { withDeadline } from "./external-request";
+import type { EnrichedSorobanEvent, SorobanRpcEvent } from "../types/soroban-event";
 
-const SOROBAN_RPC_URL =
-  process.env.SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
+export const SOROBAN_RPC_URL = stellarNetwork.sorobanRpcUrl;
 const LEDGER_BATCH_SIZE = 100;
 const MAX_ACTIVE_CONTRACTS = 100;
 
@@ -99,9 +100,12 @@ export async function loadContractRegistry(): Promise<
 
 /**
  * Routes an event to matching subscribed users based on contract ID and topic.
+ *
+ * Accepts a typed `SorobanRpcEvent` instead of `any`, so callers are
+ * required to pass a well-shaped event object at compile time.
  */
 export function routeEventToUsers(
-  event: any,
+  event: SorobanRpcEvent,
 ): { contractId: string; topic: string; userIds: string[] }[] {
   const routes: { contractId: string; topic: string; userIds: string[] }[] = [];
   const contractId = event.contractId;
@@ -111,8 +115,18 @@ export function routeEventToUsers(
   const contract = contractRegistry.get(contractId);
   if (!contract) return routes;
 
-  // Determine topic from event
-  const topic = event.topic?.[0] || "default";
+  // Determine topic from event.  The first element of the raw topic array
+  // is conventionally the event name symbol (e.g. "transfer"); fall back
+  // to "default" for events with an empty or missing topic array.
+  const firstTopic = Array.isArray(event.topic) ? event.topic[0] : undefined;
+  const topic =
+    (typeof firstTopic === 'string'
+      ? firstTopic
+      : typeof firstTopic === 'object' &&
+        firstTopic !== null &&
+        'symbol' in firstTopic
+      ? String((firstTopic as { symbol: unknown }).symbol)
+      : null) ?? 'default';
 
   // Check for exact topic match
   let matchedUserIds = contract.topicRoutes.get(topic);
@@ -292,12 +306,16 @@ export async function fetchContractEvents(
 
 /**
  * Fetches contract events within a ledger range with pagination.
+ *
+ * Each yielded batch contains `EnrichedSorobanEvent` objects — the raw RPC
+ * records with a guaranteed `ledgerSeq` field so callers never have to
+ * fall back to `(parsed as any).ledgerSeq`.
  */
 export async function* fetchContractEventsInRange(
   contractId: string,
   startLedger: number,
   endLedger: number,
-): AsyncGenerator<any[]> {
+): AsyncGenerator<EnrichedSorobanEvent[]> {
   let currentStart = startLedger;
 
   while (currentStart <= endLedger) {
@@ -325,27 +343,30 @@ export async function* fetchContractEventsInRange(
         'Soroban RPC getEvents',
       );
 
-      const events = response.events || [];
+      const events: SorobanRpcEvent[] = response.events || [];
 
       if (events.length > 0) {
-        const enrichedEvents = events.map((evt: any) => ({
+        const enrichedEvents: EnrichedSorobanEvent[] = events.map((evt) => ({
           ...evt,
-          ledgerSeq: evt.ledger || currentStart,
+          // Guarantee a numeric ledgerSeq — evt.ledger is the authoritative
+          // source; fall back to the batch start when the field is absent.
+          ledgerSeq: evt.ledger ?? currentStart,
         }));
         yield enrichedEvents;
       }
 
       if (events.length > 0 && events[events.length - 1]?.ledger) {
-        currentStart = events[events.length - 1].ledger + 1;
+        currentStart = (events[events.length - 1].ledger as number) + 1;
       } else {
         currentStart = batchEnd + 1;
       }
 
       if (events.length === 0) break;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       console.error(
         `[SorobanRPC] Error fetching events for ${contractId} in range [${currentStart}, ${batchEnd}]:`,
-        error.message,
+        errMsg,
       );
       currentStart = batchEnd + 1;
     }
@@ -509,6 +530,59 @@ export function parseSorobanMintBurnEvent(event: any): ParsedSorobanMintBurn | n
     rawAmount,
     from,
     to,
+    ledgerSeq: event.ledgerSeq ?? event.ledger,
+  };
+}
+
+export interface ParsedSorobanApproval {
+  contractId: string;
+  from: string;
+  spender: string;
+  amount: string;
+  rawAmount: bigint;
+  liveUntilLedger: number;
+  ledgerSeq?: number;
+}
+
+/**
+ * Parses a raw Soroban RPC event into a SEP-41 token `approve` event, if it
+ * looks like one. Topics: `["approve", from, spender]`. Data carries the new
+ * allowance `amount` and the ledger it's valid through — contracts vary
+ * between `live_until_ledger` (the field name in the SEP-41 reference
+ * implementation) and `expiration_ledger` (seen in some earlier/custom
+ * token contracts), so both are accepted.
+ */
+export function parseApprovalEvent(event: any): ParsedSorobanApproval | null {
+  if (!event?.topic?.length) return null;
+  const topic = extractSwapTopicValue(event.topic[0]);
+  if (topic !== 'approve') return null;
+
+  const value = event.value ?? event.data ?? {};
+  const contractId = event.contractId || '';
+
+  const rawAmount = decodeScAmount(value.amount ?? value.approve?.amount);
+  if (rawAmount === null) return null;
+
+  const from = asAddressString(value.from ?? value.approve?.from) || asAddressString(event.topic[1]);
+  const spender =
+    asAddressString(value.spender ?? value.approve?.spender) || asAddressString(event.topic[2]);
+
+  const liveUntilRaw =
+    value.live_until_ledger ??
+    value.liveUntilLedger ??
+    value.expiration_ledger ??
+    value.expirationLedger ??
+    value.approve?.live_until_ledger ??
+    0;
+  const liveUntilLedger = Number(liveUntilRaw) || 0;
+
+  return {
+    contractId,
+    from: from || '',
+    spender: spender || '',
+    amount: formatTokenAmount(rawAmount),
+    rawAmount,
+    liveUntilLedger,
     ledgerSeq: event.ledgerSeq ?? event.ledger,
   };
 }
@@ -1108,3 +1182,233 @@ export class SacMintBurnAnalyticsAggregator {
 }
 
 export const sacMintBurnAnalyticsAggregator = new SacMintBurnAnalyticsAggregator();
+
+export interface SorobanErrorInfo {
+  type: 'custom_error' | 'panic' | 'host_error' | 'invocation_error';
+  code?: number;
+  message: string;
+  contractId?: string;
+  function?: string;
+  details?: string;
+}
+
+export interface SorobanDiagnosticResult {
+  errors: SorobanErrorInfo[];
+  summary: string;
+  contractId?: string;
+}
+
+const SOROBAN_PANIC_CODES: Record<number, string> = {
+  1: 'Assertion failed',
+  2: 'Arithmetic overflow',
+  3: 'Division by zero',
+  4: 'Index out of bounds',
+  5: 'Invalid value',
+  6: 'Missing value',
+  7: 'Already exists',
+  8: 'Unexpected error',
+  9: 'Memory limit exceeded',
+  10: 'Quota exceeded',
+  11: 'Execution limit exceeded',
+  12: 'CPU instruction limit exceeded',
+  13: 'Stack limit exceeded',
+  14: 'Storage limit exceeded',
+  15: 'Budget exceeded',
+  16: 'Context error',
+  17: 'Invalid argument',
+  18: 'Invalid data',
+  19: 'Invalid contract',
+  20: 'Invalid invocation',
+};
+
+const SOROBAN_HOST_ERROR_CODES: Record<number, string> = {
+  100: 'Invalid XDR',
+  101: 'Invalid ledger entry',
+  102: 'Invalid contract',
+  103: 'Invalid invocation',
+  104: 'Missing entry',
+  105: 'Already exists',
+  106: 'Invalid auth',
+  107: 'Missing auth',
+  108: 'Too many operations',
+  109: 'Too many bytes',
+  110: 'Fee bumped',
+  111: 'No funds',
+  112: 'Bad sequence',
+  113: 'Insufficient balance',
+  114: 'No source account',
+  115: 'Invalid signature',
+  116: 'Too many signatures',
+  117: 'Invalid threshold',
+  118: 'Low threshold',
+  119: 'Op too complex',
+  120: 'No network',
+  121: 'Network error',
+  122: 'Transaction too large',
+  123: 'Duplicate operation',
+  124: 'Invalid memo',
+  125: 'Memo required',
+  126: 'Fee too low',
+  127: 'Too many ledgers',
+  128: 'Invalid limit',
+  129: 'Operation disabled',
+  130: 'Contract not found',
+  131: 'Function not found',
+  132: 'Bad auth',
+  133: 'Invalid argument',
+  134: 'Internal error',
+};
+
+function parsePanicCode(code: number): string {
+  return SOROBAN_PANIC_CODES[code] || `Unknown panic code: ${code}`;
+}
+
+function parseHostErrorCode(code: number): string {
+  return SOROBAN_HOST_ERROR_CODES[code] || `Unknown host error code: ${code}`;
+}
+
+function parseCustomError(result: any): SorobanErrorInfo | null {
+  try {
+    if (!result?.error || typeof result.error !== 'string') return null;
+
+    const errorMatch = result.error.match(/Error\(Contract, (\d+)\)/);
+    if (errorMatch) {
+      const code = parseInt(errorMatch[1], 10);
+      return {
+        type: 'custom_error',
+        code,
+        message: `Custom contract error ${code}`,
+        contractId: result.contractId,
+        function: result.function,
+        details: result.error,
+      };
+    }
+
+    const panicMatch = result.error.match(/Panic\((\d+)\)/);
+    if (panicMatch) {
+      const code = parseInt(panicMatch[1], 10);
+      return {
+        type: 'panic',
+        code,
+        message: parsePanicCode(code),
+        contractId: result.contractId,
+        function: result.function,
+        details: result.error,
+      };
+    }
+
+    const hostErrorMatch = result.error.match(/HostError\((\d+)\)/);
+    if (hostErrorMatch) {
+      const code = parseInt(hostErrorMatch[1], 10);
+      return {
+        type: 'host_error',
+        code,
+        message: parseHostErrorCode(code),
+        contractId: result.contractId,
+        function: result.function,
+        details: result.error,
+      };
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function parseInvocationError(result: any): SorobanErrorInfo | null {
+  try {
+    if (!result?.error) return null;
+
+    const errorStr = typeof result.error === 'string' ? result.error : JSON.stringify(result.error);
+
+    if (errorStr.includes('Error(Contract,')) {
+      return parseCustomError(result);
+    }
+
+    if (errorStr.includes('Panic(')) {
+      return parseCustomError(result);
+    }
+
+    if (errorStr.includes('HostError(')) {
+      return parseCustomError(result);
+    }
+
+    return {
+      type: 'invocation_error',
+      message: errorStr,
+      contractId: result.contractId,
+      function: result.function,
+      details: errorStr,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function parseSorobanDiagnosticError(
+  simulationResult: any,
+  executionResult?: any,
+): SorobanDiagnosticResult {
+  const errors: SorobanErrorInfo[] = [];
+  let contractId: string | undefined;
+
+  if (simulationResult) {
+    const simError = parseInvocationError(simulationResult);
+    if (simError) {
+      errors.push(simError);
+      contractId = simError.contractId;
+    }
+  }
+
+  if (executionResult) {
+    const execError = parseInvocationError(executionResult);
+    if (execError) {
+      errors.push(execError);
+      contractId = contractId || execError.contractId;
+    }
+  }
+
+  const summary = errors.length === 0
+    ? 'No errors detected'
+    : errors.length === 1
+    ? errors[0].message
+    : `${errors.length} errors detected: ${errors.map(e => e.message).join(', ')}`;
+
+  return {
+    errors,
+    summary,
+    contractId,
+  };
+}
+
+export function decodeSorobanErrorFromXdr(xdrBase64: string): SorobanErrorInfo | null {
+  try {
+    const scError = StellarSdk.xdr.ScError.fromXDR(Buffer.from(xdrBase64, 'base64'));
+    const errorType = scError.switch();
+    const typeName: string = (errorType as { name?: string }).name ?? String(errorType);
+
+    // The sceContract arm carries a ScErrorCode in contractCode()
+    if (typeName === 'sceContract') {
+      const contractCode = scError.contractCode();
+      return {
+        type: 'custom_error',
+        code: contractCode,
+        message: `Custom contract error (${contractCode})`,
+        details: `ScError(sceContract, ${contractCode})`,
+      };
+    }
+
+    // All other system-level errors (sceWasmVm, sceContext, sceStorage, sceObject,
+    // sceCrypto, sceEvents, sceBudget, sceValue, sceAuth) carry a ScErrorCode in code()
+    const code = scError.code() as unknown as { name: string; value: number };
+    return {
+      type: 'host_error',
+      code: code.value,
+      message: `Soroban ${typeName} error: ${code.name} (${code.value})`,
+      details: `ScError(${typeName}, ${code.name})`,
+    };
+  } catch {
+    return null;
+  }
+}
