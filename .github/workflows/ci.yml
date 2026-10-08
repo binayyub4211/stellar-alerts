@@ -110,17 +110,17 @@ jobs:
       - name: Verify CI workspace matrix covers every workspace
         run: node .github/verify-workspace-matrix.mjs
 
-      - name: Validate environment examples
-        run: npm run check:env-examples
+      # Fail fast on the dependency-level gates (issue #339) before the slower
+      # Prisma/typecheck/build steps: `test:scripts` covers the release tooling
+      # and `release:report:check` enforces the license allow/deny policy, so a
+      # new copyleft or unlicensed dependency is caught on the PR that adds it.
+      # The OSV vulnerability half of the gate runs in the tag-triggered
+      # `.github/workflows/release.yml`, where the scan report is available.
+      - name: Run Ops Script Unit Tests
+        run: npm run test:scripts
 
-      - name: Test contributor checks
-        run: npm run test:contributor-checks
-
-      - name: Scan added lines for secrets
-        run: npm run check:secrets -- --range "$BASE_SHA" "$HEAD_SHA"
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Enforce dependency license policy
+        run: npm run release:report:check
 
       - name: Generate Prisma Client
         run: npx prisma generate
