@@ -8,6 +8,7 @@ import {
   CursorError,
 } from '../../utils/pagination';
 import { withSummaryCache } from '../../lib/summaryCache';
+import { simulateTransaction, SorobanFeeEstimate } from '../../lib/soroban';
 
 export type PaymentSortField = 'receivedAt' | 'amount' | 'asset';
 export type SortOrder = 'asc' | 'desc';
@@ -147,15 +148,10 @@ export class PaymentsService {
           _count: { id: true },
         });
 
-        const totalReceivedUsd = Number(result._sum.amount || 0);
-        const paymentCount = result._count.id || 0;
-
-        const summary: Record<string, unknown> = {
-          totalReceived: totalReceivedUsd,
-          totalVolumeXLM: totalReceivedUsd,
-          paymentCount,
-          totalPayments: paymentCount,
-        };
+    return {
+      totalReceived: result._sum.amount || 0,
+      paymentCount: result._count.id || 0,
+    };
 
         if (fiatCurrency && isSupportedFiatCurrency(fiatCurrency)) {
           const conversion = await convertUsdToFiat(
@@ -344,6 +340,19 @@ export class PaymentsService {
     };
 
     return { summary, daily };
+  }
+
+  /**
+   * Estimates Soroban transaction fees including storage rent and read/write
+   * ledger footprints by delegating to the Soroban RPC `simulateTransaction`
+   * method.
+   *
+   * @param xdrEnvelope - Base64-encoded XDR TransactionEnvelope to simulate.
+   * @returns A {@link SorobanFeeEstimate} with full fee breakdown and footprint.
+   */
+  async estimateFee(xdrEnvelope: string): Promise<SorobanFeeEstimate> {
+    console.log('[PaymentsService] Estimating Soroban transaction fee via RPC simulation');
+    return simulateTransaction(xdrEnvelope);
   }
 }
 
