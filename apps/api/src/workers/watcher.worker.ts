@@ -208,16 +208,16 @@ export async function processPaymentRecord(
               { eventType: 'payment.realtime', aggregateId: persistedPayment.id, payload: eventPayload },
             ],
           });
-        }
-
-        let cursorGap = { hasGap: false, ledgerDelta: 0 };
-        if (pagingToken) {
-          if (options.skipGapCheck) {
-            await tx.ingestionCursor.upsert({
-              where: { walletId: wallet.id },
-              create: { walletId: wallet.id, pagingToken },
-              update: { pagingToken, ...buildCursorSuccessUpdate() },
-            });
+          isNewPayment = true;
+        } catch (err: unknown) {
+          const prismaErr = err as { code?: string };
+          if (prismaErr.code === 'P2002') {
+            // A concurrent processor (SSE stream + poll loop, or two
+            // overlapping bounded-backfill passes) inserted this payment
+            // first — reorg-like duplicate delivery, not a real error.
+            // Treat it as already recorded: don't re-alert.
+            log.info({ txHash }, '🔁 Duplicate payment insert raced and lost, skipping (already recorded)');
+            payment = await prisma.payment.findUnique({ where: { txHash } });
           } else {
             const previousPagingToken =
               options.previousPagingToken !== undefined
@@ -307,20 +307,7 @@ export async function processPaymentRecord(
               receivedAt: receivedAt.toISOString(),
             };
 
-            const result = await evaluateAndDispatch(event, {
-              findRules: async () => alertRules as unknown as AlertRuleRecord[],
-              hasDispatched: async (paymentId) =>
-                Boolean(await prisma.alertRuleDispatchLog.findUnique({ where: { paymentId } })),
-              recordDispatch: async (paymentId, matchedRuleIds) => {
-                await prisma.alertRuleDispatchLog.create({
-                  data: { paymentId, matchedRuleIds },
-                });
-              },
-              enqueueAlert: async () => enqueuePaymentAlert(alertJobPayload),
-            });
-
-            dispatched = result.enqueued;
-            span.setAttribute('payment.matchedAlertRules', result.matchedRuleIds.length);
+            shouldSendAlert = shouldAlert(filterRules, paymentContext);
 
             if (result.matchedRuleIds.length === 0) {
               log.info(
@@ -371,11 +358,17 @@ export async function processPaymentRecord(
         span.setAttribute('payment.enqueued', dispatched);
       }
 
-      if (gap.hasGap) {
-        log.warn({ walletId: wallet.id, ledgerDelta: gap.ledgerDelta }, '⚠️ Ledger gap detected in ingestion cursor');
-        span.setAttribute('cursor.gapDetected', true);
-        span.setAttribute('cursor.gapLedgerDelta', gap.ledgerDelta);
-        await recoverFromLedgerGap(wallet);
+      const pagingToken = getHorizonPagingToken(record);
+      if (pagingToken) {
+        const gap = await saveCursor(wallet.id, pagingToken, {
+          skipGapCheck: options.skipGapCheck,
+          previousPagingToken: options.previousPagingToken,
+        });
+        if (gap.hasGap) {
+          span.setAttribute('cursor.gapDetected', true);
+          span.setAttribute('cursor.gapLedgerDelta', gap.ledgerDelta);
+          await recoverFromLedgerGap(wallet);
+        }
       }
 
       span.setStatus({ code: SpanStatusCode.OK });
@@ -563,20 +556,17 @@ export async function processWalletPayments(wallet: { id: string; publicKey: str
         }
       }
 
-      log.warn(
-        `[WatcherWorker] Catch-up page limit reached for ${wallet.publicKey.substring(0, 8)}..., resuming next poll from ${cursor}`,
-      );
-      span.setStatus({ code: SpanStatusCode.OK });
-      span.end();
-    } catch (err) {
-      span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
-      span.end();
-      throw err;
+      if (records.length < CURSOR_PAGE_SIZE) return;
     }
   });
 }
 
-export const handleStreamRecord = processPaymentRecord;
+    console.warn(
+      `[WatcherWorker] Catch-up page limit reached for ${wallet.publicKey.substring(0, 8)}..., resuming next poll from ${cursor}`
+    );
+  } finally {
+    await lock.release();
+  }
 
 export type StreamHandlerOptions = {
   onmessage: (record: HorizonOperationRecord) => Promise<void>;
@@ -700,14 +690,11 @@ export async function startHorizonSSEStream(
             resetHeartbeat();
             attempts = 1;
             console.log(`[WatcherStream] ⚡ Live SSE stream message received: ${record.type}`);
-            await enqueueMessage(async () => {
-              await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
-              const token = getHorizonPagingToken(record);
-              if (token) {
-                lastPagingToken = token;
-              }
-              streamMetrics.messagesProcessed++;
-            });
+            await processPaymentRecord(wallet, record, { previousPagingToken: lastPagingToken });
+            const token = getHorizonPagingToken(record);
+            if (token) {
+              lastPagingToken = token;
+            }
           },
           onerror: (error: Error | unknown) => {
             const errMsg = error instanceof Error ? error.message : String(error);
@@ -812,7 +799,14 @@ export async function pollOnce() {
         pollSpan.end();
         return;
       }
-      await processWalletsConcurrently(wallets, env.WATCHER_WALLET_CONCURRENCY);
+      for (const wallet of wallets) {
+        try {
+          await processWalletPayments({ id: wallet.id, publicKey: wallet.publicKey, userId: wallet.userId });
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.error(`[WatcherWorker] Error processing wallet ${wallet.publicKey}:`, errMsg);
+        }
+      }
       const contractIds = getActiveContractIds();
       if (contractIds.length > 0) {
         for (const contractId of contractIds) {
@@ -1013,4 +1007,36 @@ if (require.main === module) {
   registerSupervisorHeartbeat();
   startMemoryMonitor();
   runWatcher();
+
+  // Issue #20: Graceful shutdown for the watcher worker process
+  let watcherIntervalId: NodeJS.Timeout | undefined;
+
+  // Patch runWatcher to capture the interval handle so we can stop it
+  const originalSetInterval = global.setInterval;
+  (global as any).setInterval = (fn: (...args: any[]) => void, delay?: number, ...args: any[]) => {
+    const id = originalSetInterval(fn, delay, ...args);
+    watcherIntervalId = id;
+    return id;
+  };
+
+  const shutdownWorker = async (signal: string) => {
+    console.log(`[WatcherWorker] Received ${signal}. Shutting down gracefully...`);
+
+    if (watcherIntervalId !== undefined) {
+      clearInterval(watcherIntervalId);
+      watcherIntervalId = undefined;
+    }
+
+    try {
+      await prisma.$disconnect();
+      console.log('[WatcherWorker] Shutdown complete.');
+      process.exit(0);
+    } catch (err) {
+      console.error('[WatcherWorker] Error during shutdown:', err);
+      process.exit(1);
+    }
+  };
+
+  process.once('SIGTERM', () => shutdownWorker('SIGTERM'));
+  process.once('SIGINT', () => shutdownWorker('SIGINT'));
 }

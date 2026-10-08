@@ -98,11 +98,21 @@ Fund a fresh keypair on Stellar Testnet via Friendbot and verify automated inges
 npx tsx --env-file=apps/api/.env apps/api/scripts/seed-and-trigger-payment.ts
 ```
 
-### 6. Validate Dependabot Configuration
-Verify the automated dependency update configuration:
-```bash
-npm run validate:dependabot
+### Stellar Network Profiles
+
+The API uses the `testnet` profile by default. Set `STELLAR_NETWORK_PROFILE=mainnet` to switch Horizon, Soroban RPC, and transaction network passphrase together. This prevents a Horizon/Soroban network mismatch.
+
+For a private network or proxy, use `STELLAR_NETWORK_PROFILE=custom` and provide all of the following:
+
+```dotenv
+STELLAR_CUSTOM_HORIZON_URL=https://horizon.example.com
+STELLAR_CUSTOM_HORIZON_URLS=https://horizon-2.example.com
+STELLAR_CUSTOM_SOROBAN_RPC_URL=https://rpc.example.com
+STELLAR_CUSTOM_NETWORK_PASSPHRASE=Custom Network
+STELLAR_CUSTOM_ALLOWED_HOSTS=horizon.example.com,horizon-2.example.com,rpc.example.com
 ```
+
+Custom endpoints must be HTTPS and their hostnames must be listed in `STELLAR_CUSTOM_ALLOWED_HOSTS`. The previous `HORIZON_URL*`, `SOROBAN_RPC_URL`, and `STELLAR_NETWORK_PASSPHRASE` variables are accepted as compatibility aliases only when `custom` is selected. Existing deployments therefore remain on testnet until they opt into a profile; review the selected profile before moving funds or signing transactions.
 
 ---
 
@@ -113,8 +123,10 @@ npm run validate:dependabot
 - **Grant Submission Qualification Matrix**: See **[SUBMISSION.md](SUBMISSION.md)**.
 - **System Design & API Specs**: See **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 - **Contribution Guidelines**: See **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+- **Code of Conduct**: See **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
 - **Development Roadmap**: See **[ROADMAP.md](ROADMAP.md)**.
 - **Soroban Smart Contract**: See **[contracts/alert_registry/README.md](contracts/alert_registry/README.md)**.
+- **Slack Slash Commands (`/stellar`)**: See **[docs/SLACK_SLASH_COMMANDS.md](docs/SLACK_SLASH_COMMANDS.md)**.
 
 ---
 
@@ -126,15 +138,9 @@ Join our official Telegram community to ask questions, chat with maintainers, di
 
 ---
 
-## 🤖 Automated Dependency Management
+## 🤝 Code of Conduct
 
-Dependabot is configured to automatically update dependencies weekly with grouped PRs to reduce notification noise:
-
-- **JavaScript/npm workspace dependencies**: All workspace packages (`apps/*`, `packages/*`) are monitored for updates
-- **Docker images**: Base images in `docker-compose.yml` (postgres, redis, toxiproxy) are monitored 
-- **GitHub Actions**: Workflow dependencies (actions/checkout, setup-node, etc.) are monitored
-
-All updates run weekly on Mondays and are grouped by ecosystem to minimize PR volume. The configuration can be validated with `npm run validate:dependabot`.
+We are committed to fostering an open and welcoming community. All contributors and participants are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md), which outlines our standards, reporting channels, and enforcement responsibilities.
 
 ---
 

@@ -352,22 +352,17 @@ export class MultiNodeHorizonClient {
     for (let i = 0; i < this.servers.length; i++) {
       const server = this.servers[i];
       try {
-        const payments = await withDeadline(
-          () =>
-            server
-              .payments()
-              .forAccount(publicKey)
-              .cursor(cursor)
-              .order('asc')
-              .limit(limit)
-              .call(),
-          timeoutMs,
-          options.signal,
-          `Horizon node ${this.endpoints[i]}`,
-        );
-        return { records: payments.records, allNodesFailed: false, lastError: null };
-      } catch (error: any) {
-        lastError = error?.message || String(error);
+        const payments = await server
+          .payments()
+          .forAccount(publicKey)
+          .cursor(cursor)
+          .order('asc')
+          .limit(limit)
+          .call();
+        return { records: asHorizonOperationRecords(payments.records), allNodesFailed: false, lastError: null };
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        lastError = errMsg;
         console.warn(
           `[MultiNodeHorizon] Horizon node ${this.endpoints[i]} failed: ${lastError}. Trying fallback node...`,
         );
@@ -444,6 +439,18 @@ export class MultiNodeHorizonClient {
 
 export const multiNodeClient = new MultiNodeHorizonClient();
 
+export interface SetOptionsOperationSummary {
+  type: 'set_options';
+  signer_key?: string;
+  signer_weight?: number;
+  master_weight?: number;
+  low_threshold?: number;
+  med_threshold?: number;
+  high_threshold?: number;
+  transaction_hash?: string;
+  created_at?: string;
+}
+
 export const stellar = {
   server,
   multiNode: multiNodeClient,
@@ -454,7 +461,11 @@ export const stellar = {
   async getAccountSigners(
     publicKey: string,
     options: { timeoutMs?: number; signal?: AbortSignal } = {},
-  ): Promise<{ signers: MultisigSigner[]; thresholds: MultisigThresholds } | null> {
+  ): Promise<{
+    signers: MultisigSigner[];
+    thresholds: MultisigThresholds;
+    masterWeight: number;
+  } | null> {
     if (!publicKey || !isValidEd25519PublicKey(publicKey)) {
       console.warn(`[Stellar] Skipping invalid public key format or checksum: "${publicKey}"`);
       return null;
@@ -468,6 +479,9 @@ export const stellar = {
         options.signal,
         'Horizon',
       );
+      const masterSigner = account.signers.find(
+        (s) => s.key === (account.account_id || (account as any).id),
+      );
       return {
         signers: account.signers.map((s) => ({ key: s.key, weight: s.weight })),
         thresholds: {
@@ -475,10 +489,58 @@ export const stellar = {
           medium: account.thresholds.med_threshold,
           high: account.thresholds.high_threshold,
         },
+        masterWeight: masterSigner ? Number(masterSigner.weight) : 0,
       };
     } catch (error: any) {
       console.error(`[Stellar] Error fetching signers for account ${publicKey}:`, error?.message || error);
       return null;
+    }
+  },
+
+  async getRecentSetOptionsOperations(
+    publicKey: string,
+    options: { timeoutMs?: number; signal?: AbortSignal; limit?: number } = {},
+  ): Promise<SetOptionsOperationSummary[]> {
+    if (!publicKey || !StellarSdk.StrKey.isValidEd25519PublicKey(publicKey)) {
+      return [];
+    }
+
+    const timeoutMs = options.timeoutMs ?? env.HORIZON_REQUEST_TIMEOUT_MS;
+    const limit = options.limit ?? 10;
+
+    try {
+      const operations = await withDeadline(
+        () =>
+          server
+            .operations()
+            .forAccount(publicKey)
+            .order('desc')
+            .limit(limit)
+            .call(),
+        timeoutMs,
+        options.signal,
+        'Horizon',
+      );
+
+      return operations.records
+        .filter((record: any) => record?.type === 'set_options')
+        .map((record: any) => ({
+          type: 'set_options',
+          signer_key: record.signer_key ?? record.signerKey ?? undefined,
+          signer_weight: record.signer_weight ?? record.signerWeight ?? undefined,
+          master_weight: record.master_weight ?? record.masterWeight ?? undefined,
+          low_threshold: record.low_threshold ?? record.lowThreshold ?? undefined,
+          med_threshold: record.med_threshold ?? record.medThreshold ?? undefined,
+          high_threshold: record.high_threshold ?? record.highThreshold ?? undefined,
+          transaction_hash: record.transaction_hash ?? record.transactionHash ?? undefined,
+          created_at: record.created_at ?? undefined,
+        }));
+    } catch (error: any) {
+      console.warn(
+        `[Stellar] Error fetching set_options operations for ${publicKey}:`,
+        error?.message || error,
+      );
+      return [];
     }
   },
   // Helper to fetch recent payments for a given account
@@ -494,21 +556,14 @@ export const stellar = {
 
     const timeoutMs = options.timeoutMs ?? env.HORIZON_REQUEST_TIMEOUT_MS;
     try {
-      const payments = await withDeadline(
-        () =>
-          server
-            .payments()
-            .forAccount(publicKey)
-            .order('desc')
-            .limit(limit)
-            .call(),
-        timeoutMs,
-        options.signal,
-        'Horizon',
-      );
-      
-      return payments.records;
-    } catch (error: any) {
+      const payments = await server.payments()
+        .forAccount(publicKey)
+        .order('desc')
+        .limit(limit)
+        .call();
+
+      return asHorizonOperationRecords(payments.records);
+    } catch (error: unknown) {
       logPaymentsError(publicKey, error);
       return [];
     }

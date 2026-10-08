@@ -343,7 +343,6 @@ describe('checkOpenApiBreakingChanges', () => {
   it('exits 1 via the CLI when breaking, 0 when clean (exit-code contract)', async () => {
     const { execFileSync } = await import('node:child_process');
     const script = path.resolve(originalCwd, 'scripts/check-openapi-breaking-changes.ts');
-
     const run = (base: Record<string, unknown>, head: Record<string, unknown>): number => {
       const baseFile = writeTempSpecSync(base);
       const headFile = writeTempSpecSync(head);
@@ -351,7 +350,7 @@ describe('checkOpenApiBreakingChanges', () => {
         execFileSync(
           'npx',
           ['tsx', script, '--base-path', baseFile, '--head', headFile],
-          { encoding: 'utf8', stdio: 'pipe' }
+          { encoding: 'utf8', stdio: 'pipe', shell: process.platform === 'win32' }
         );
         return 0;
       } catch (err: unknown) {
